@@ -36,6 +36,7 @@ Precisa do Python 3.9 ou mais novo instalado (não precisa instalar mais nada) e
 | `metricas.py` | Calcula as métricas. |
 | `servidor.py` | Atualiza os dados e serve o painel. |
 | `painel.html` | A página do painel. |
+| `.gitignore` | O que não vai para o GitHub (banco de dados, temporários, segredos). |
 
 ## De onde vêm os dados
 
@@ -44,6 +45,36 @@ Precisa do Python 3.9 ou mais novo instalado (não precisa instalar mais nada) e
 
 O endereço do NodeReal em `vellcfg.py` usa uma chave pública compartilhada. Se o programa
 começar a falhar ao atualizar, crie uma chave gratuita em https://nodereal.io e troque no arquivo.
+
+## Versão online
+
+O mesmo programa roda num servidor. Ele precisa ficar ligado o tempo todo e ter um
+**disco permanente** para o banco (`vell.db`), então hospedagem de site simples não serve.
+Opções: Railway ou Render (atualizam sozinhos a partir do GitHub) ou uma VPS com Docker.
+
+Arquivos usados online:
+
+| Arquivo | Para que serve |
+|---|---|
+| `Dockerfile` | Receita para montar o servidor (Python 3.11, sem pacotes extras). |
+| `Procfile`, `requirements.txt`, `.python-version` | Para serviços que rodam Python direto, sem Docker. |
+| `.env.example` | Lista das configurações online (copie e preencha no painel do serviço). |
+
+Passos:
+
+1. Envie esta pasta para um repositório **privado** no GitHub.
+2. No serviço de hospedagem, crie o projeto a partir desse repositório (ele usa o `Dockerfile`).
+3. Crie um disco permanente montado em `/data`.
+4. Cadastre as variáveis de `.env.example`, principalmente `VELL_RPC_ARCHIVE` com a sua
+   chave grátis do NodeReal.
+5. Na primeira vez o servidor baixa todo o histórico da blockchain (alguns minutos).
+   Depois só busca o que for novo, a cada 2 minutos.
+
+Para corrigir ou mudar algo: altere aqui no PC, teste em http://localhost:8765, salve
+a versão no git e envie ao GitHub. O serviço percebe e reinicia sozinho com a versão nova.
+Se der problema, volte para a versão anterior pelo próprio serviço ou pelo git.
+
+Para conferir se o servidor está vivo: `/api/status`.
 
 ## Limites conhecidos
 

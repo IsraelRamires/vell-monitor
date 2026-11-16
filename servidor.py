@@ -98,10 +98,14 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     threading.Thread(target=loop, daemon=True).start()
+    local = C.HOST in ("127.0.0.1", "localhost")
     url = f"http://localhost:{C.PORT}"
-    srv = ThreadingHTTPServer(("127.0.0.1", C.PORT), Handler)
-    coletor.log(f"Painel do VELL aberto em {url}  (feche esta janela para parar)")
-    if not os.environ.get("VELL_SEM_NAVEGADOR"):
+    srv = ThreadingHTTPServer((C.HOST, C.PORT), Handler)
+    if local:
+        coletor.log(f"Painel do VELL aberto em {url}  (feche esta janela para parar)")
+    else:
+        coletor.log(f"Painel do VELL no ar: escutando em {C.HOST}:{C.PORT}  (banco em {C.DB_PATH})")
+    if local and not os.environ.get("VELL_SEM_NAVEGADOR"):
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     try:
         srv.serve_forever()

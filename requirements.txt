@@ -1,0 +1,2 @@
+# O monitor usa só a biblioteca padrão do Python 3.9+; não há pacotes para instalar.
+# Este arquivo existe para os serviços de hospedagem reconhecerem o projeto como Python.

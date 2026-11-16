@@ -1,0 +1,7 @@
+.git
+dados/
+*.db
+__pycache__/
+*.pyc
+.env
+painel_versao_celular.png

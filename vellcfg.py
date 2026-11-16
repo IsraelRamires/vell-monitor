@@ -1,4 +1,8 @@
-"""Configuração do monitor do VELL. Altere aqui se precisar."""
+"""Configuração do monitor do VELL. Altere aqui se precisar.
+
+Na versão online, alguns valores vêm de variáveis de ambiente (veja .env.example):
+VELL_RPC_ARCHIVE, VELL_HOST, PORT e VELL_DB. Sem elas, vale o que está escrito aqui.
+"""
 import os
 
 # --- Token e par monitorados -------------------------------------------------
@@ -14,15 +18,17 @@ LAUNCH_TS = 1791331200              # 07/10/2026 00:00 UTC — início das negoc
 # os outros servem só para as atualizações recentes, caso o primeiro falhe.
 # Se quiser mais estabilidade, crie uma chave gratuita em https://nodereal.io
 # e troque a parte final do primeiro endereço pela sua chave.
-RPC_ARCHIVE = "https://bsc-mainnet.nodereal.io/v1/64a9df0874fb4a93b9d0a3849de012d3"
+RPC_ARCHIVE = os.environ.get("VELL_RPC_ARCHIVE") or "https://bsc-mainnet.nodereal.io/v1/64a9df0874fb4a93b9d0a3849de012d3"
 RPC_RECENT = ["https://bsc-rpc.publicnode.com"]
 MAX_RANGE = 49_000                  # máximo de blocos por consulta de eventos
 
 # --- Programa ----------------------------------------------------------------
 UPDATE_SECONDS = 120                # intervalo entre atualizações (2 minutos)
-PORT = 8765                         # endereço do painel: http://localhost:8765
+PORT = int(os.environ.get("PORT") or 8765)          # endereço do painel: http://localhost:8765
+# 127.0.0.1 = só este computador acessa. Online use 0.0.0.0 (aceita acessos de fora).
+HOST = os.environ.get("VELL_HOST") or "127.0.0.1"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "dados", "vell.db")
+DB_PATH = os.environ.get("VELL_DB") or os.path.join(BASE_DIR, "dados", "vell.db")
 TZ_OFFSET_HOURS = -3                # horário de Brasília
 
 # Faixas de tamanho de carteira (em % do fornecimento total)
