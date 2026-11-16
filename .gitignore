@@ -17,3 +17,6 @@ __pycache__/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Site gerado para o GitHub Pages
+_site/

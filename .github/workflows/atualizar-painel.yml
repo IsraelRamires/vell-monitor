@@ -1,0 +1,81 @@
+# Mantém o painel online atualizado no GitHub Pages.
+# A cada ~10 minutos: recupera o banco salvo, busca os eventos novos da BSC,
+# recalcula as métricas, publica o painel e guarda o banco para a próxima vez.
+name: Atualizar painel online
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  actions: write          # para apagar cópias antigas do banco
+
+concurrency:
+  group: atualizar-painel
+  cancel-in-progress: false
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: github-pages
+      url: ${{ steps.publicar.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Recuperar o banco da última atualização
+        id: banco
+        uses: actions/cache/restore@v4
+        with:
+          path: dados/vell.db
+          key: vell-db-${{ github.run_id }}
+          restore-keys: vell-db-
+
+      - name: Primeira vez - baixar o banco inicial
+        if: steps.banco.outputs.cache-matched-key == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p dados
+          gh release download banco-inicial -p vell.db -D dados \
+            || echo "Sem banco inicial: o histórico será baixado da blockchain."
+
+      - name: Coletar dados e gerar o painel
+        env:
+          VELL_RPC_ARCHIVE: ${{ secrets.VELL_RPC_ARCHIVE }}
+          VELL_INTERVALO_SITE: "600"
+        run: python gerar_site.py _site
+
+      - name: Guardar o banco para a próxima vez
+        if: always() && hashFiles('dados/vell.db') != ''
+        uses: actions/cache/save@v4
+        with:
+          path: dados/vell.db
+          key: vell-db-${{ github.run_id }}
+
+      - name: Apagar cópias antigas do banco
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list --repo "$GITHUB_REPOSITORY" --key vell-db- --sort created_at --order desc --limit 100 --json id --jq '.[2:][].id' \
+            | xargs -r -n1 gh cache delete --repo "$GITHUB_REPOSITORY" || true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publicar
+        id: publicar
+        uses: actions/deploy-pages@v4

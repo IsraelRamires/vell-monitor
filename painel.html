@@ -118,7 +118,7 @@ header #status{margin-left:0}
 <nav id="nav"></nav>
 <div id="wait">Preparando os dados… Na primeira vez o programa baixa todo o histórico da blockchain (10 a 20 minutos).<div id="waitd" style="margin-top:8px"></div></div>
 <div id="wrap">
-<aside id="logo" style="display:none"><img src="/logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div></aside>
+<aside id="logo" style="display:none"><img src="logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div></aside>
 <main id="main" style="display:none">
 
 <section id="t-geral">
@@ -751,11 +751,11 @@ function render(){
 }
 async function tick(){
   try{
-    const s=await (await fetch("/api/status")).json();
+    const s=await (await fetch("api/status?t="+Date.now())).json();
     const lab={ok:"Atualizado",coletando:"Buscando dados novos…",calculando:"Calculando…",erro:"Falha na última atualização (tentando de novo)",iniciando:"Iniciando…"}[s.status]||s.status;
     $("status").innerHTML=`${lab}${s.ok_em?` · dados de ${dtm(s.ok_em)}`:""}<br>atualiza a cada ${Math.round(s.intervalo/60)} min${s.erro?` · ${s.erro.slice(0,90)}`:""}`;
     $("waitd").textContent=s.detalhe||"";
-    if(!D||D.vazio||s.ok_em>(D._ok||0)){const d=await (await fetch("/api/dados")).json();if(!d.vazio){d._ok=s.ok_em;D=d;render()}}
+    if(!D||D.vazio||s.ok_em>(D._ok||0)){const d=await (await fetch("api/dados?t="+Date.now())).json();if(!d.vazio){d._ok=s.ok_em;D=d;render()}}
   }catch(e){$("status").textContent="Sem conexão com o programa. Ele está aberto?"}
 }
 tick();setInterval(tick,15000);

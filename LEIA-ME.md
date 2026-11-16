@@ -36,6 +36,7 @@ Precisa do Python 3.9 ou mais novo instalado (não precisa instalar mais nada) e
 | `metricas.py` | Calcula as métricas. |
 | `servidor.py` | Atualiza os dados e serve o painel. |
 | `painel.html` | A página do painel. |
+| `gerar_site.py` | Gera a versão online (usado pelo GitHub). |
 | `.gitignore` | O que não vai para o GitHub (banco de dados, temporários, segredos). |
 
 ## De onde vêm os dados
@@ -46,35 +47,39 @@ Precisa do Python 3.9 ou mais novo instalado (não precisa instalar mais nada) e
 O endereço do NodeReal em `vellcfg.py` usa uma chave pública compartilhada. Se o programa
 começar a falhar ao atualizar, crie uma chave gratuita em https://nodereal.io e troque no arquivo.
 
-## Versão online
+## Versão online (GitHub Pages)
 
-O mesmo programa roda num servidor. Ele precisa ficar ligado o tempo todo e ter um
-**disco permanente** para o banco (`vell.db`), então hospedagem de site simples não serve.
-Opções: Railway ou Render (atualizam sozinhos a partir do GitHub) ou uma VPS com Docker.
+O painel online fica em **https://israelramires.github.io/vell-monitor/** e se atualiza
+sozinho, sem servidor pago:
 
-Arquivos usados online:
+- A cada ~10 minutos o GitHub roda o arquivo `.github/workflows/atualizar-painel.yml`.
+- Ele recupera o banco da vez anterior, busca os eventos novos da BSC (`gerar_site.py`),
+  recalcula tudo e publica o painel no GitHub Pages.
+- O banco fica guardado no próprio GitHub (cache do Actions). Se um dia sumir, ele parte
+  da cópia anexada na versão "banco-inicial" do repositório e completa pela blockchain.
 
-| Arquivo | Para que serve |
-|---|---|
-| `Dockerfile` | Receita para montar o servidor (Python 3.11, sem pacotes extras). |
-| `Procfile`, `requirements.txt`, `.python-version` | Para serviços que rodam Python direto, sem Docker. |
-| `.env.example` | Lista das configurações online (copie e preencha no painel do serviço). |
+Diferenças em relação ao programa no PC: o online atualiza a cada ~10 minutos (o GitHub
+às vezes atrasa alguns minutos), e o PC a cada 2.
 
-Passos:
+### Para corrigir ou mudar algo
 
-1. Envie esta pasta para um repositório **privado** no GitHub.
-2. No serviço de hospedagem, crie o projeto a partir desse repositório (ele usa o `Dockerfile`).
-3. Crie um disco permanente montado em `/data`.
-4. Cadastre as variáveis de `.env.example`, principalmente `VELL_RPC_ARCHIVE` com a sua
-   chave grátis do NodeReal.
-5. Na primeira vez o servidor baixa todo o histórico da blockchain (alguns minutos).
-   Depois só busca o que for novo, a cada 2 minutos.
+1. Altere aqui no PC e teste em http://localhost:8765 (dê dois cliques em `iniciar.bat`).
+2. Salve a versão no git e envie ao GitHub (`git push`).
+3. O envio dispara a atualização: em 2 a 4 minutos o site já está com a mudança.
+4. Para desfazer, volte a versão no git e envie de novo.
 
-Para corrigir ou mudar algo: altere aqui no PC, teste em http://localhost:8765, salve
-a versão no git e envie ao GitHub. O serviço percebe e reinicia sozinho com a versão nova.
-Se der problema, volte para a versão anterior pelo próprio serviço ou pelo git.
+Para acompanhar ou forçar uma atualização: aba **Actions** do repositório no GitHub,
+"Atualizar painel online" → "Run workflow".
 
-Para conferir se o servidor está vivo: `/api/status`.
+Observação: o GitHub desliga tarefas agendadas de repositórios sem nenhuma alteração por
+60 dias. Se o site parar de atualizar, basta enviar qualquer mudança ou clicar em
+"Enable workflow" na aba Actions.
+
+### Rodar em outro servidor (opcional)
+
+`Dockerfile`, `Procfile`, `requirements.txt` e `.env.example` permitem rodar o programa
+completo (com atualização a cada 2 minutos) em serviços como Railway, Render ou uma VPS,
+com um disco permanente montado em `/data`.
 
 ## Limites conhecidos
 
