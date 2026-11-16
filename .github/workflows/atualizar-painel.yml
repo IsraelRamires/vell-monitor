@@ -57,15 +57,16 @@ jobs:
           VELL_INTERVALO_SITE: "600"
         run: python gerar_site.py _site
 
+      # só guarda quando tudo deu certo (execução cancelada ou com erro não estraga o banco salvo)
       - name: Guardar o banco para a próxima vez
-        if: always() && hashFiles('dados/vell.db') != ''
+        if: success() && hashFiles('dados/vell.db') != ''
         uses: actions/cache/save@v4
         with:
           path: dados/vell.db
           key: vell-db-${{ github.run_id }}
 
       - name: Apagar cópias antigas do banco
-        if: always()
+        if: success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
