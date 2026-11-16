@@ -1,0 +1,19 @@
+# Banco de dados gerado a partir da blockchain (cada máquina monta o seu)
+dados/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Arquivos temporários do Python
+__pycache__/
+*.pyc
+
+# Configurações locais e segredos (não vão para o GitHub)
+.env
+*.local.py
+
+# Sistema
+Thumbs.db
+desktop.ini
+.DS_Store

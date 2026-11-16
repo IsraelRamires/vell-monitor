@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MONITOR TOKEN VELL</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#0f1115;--card:#171a21;--line:#262a33;--txt:#e8eaee;--mut:#9aa0aa;--red:#ff4d4f;--green:#2ec4a6;--gold:#f7b500;--blue:#7b8cff;--purple:#b57bff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 "Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:18px;margin:0}
+header h1 span{color:var(--red)}
+#status{color:var(--mut);font-size:12.5px;margin-left:auto;text-align:right}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--line)}
+nav button,.seg button{background:transparent;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;font:inherit}
+nav button.on,.seg button.on{background:var(--card);color:#fff;border-color:#4a5060}
+#wrap{display:flex;align-items:flex-start;max-width:1600px;margin:0 auto}
+#logo{position:sticky;top:76px;flex:0 0 170px;width:170px;padding:18px 0 0 20px;z-index:4}
+#ref-lado{display:flex;flex-direction:column;gap:8px;margin-top:14px;background:var(--card);border:1px solid #5a3a1a;border-radius:10px;padding:11px;font-size:12.5px}
+#ref-lado:empty{display:none}
+#ref-lado .codigo{font-size:14px;text-align:center;padding:5px 4px}
+#ref-lado button{width:100%;padding:7px 6px}
+#logo img{width:64px;height:64px;border-radius:14px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+main{padding:18px 20px 60px;max-width:1500px;margin:0 auto;flex:1 1 0;min-width:0}
+@media(max-width:700px){#logo{flex-basis:auto;width:auto}#ref-lado{display:none}#logo{padding-left:10px}#logo img{width:44px;height:44px;border-radius:10px}main{padding-left:10px}}
+section{display:none}section.on{display:block}
+h2{font-size:16px;margin:26px 0 4px}
+h2:first-child{margin-top:4px}
+p.exp{color:var(--mut);margin:0 0 10px;max-width:980px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin:10px 0 6px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.kpi .l{color:var(--mut);font-size:12px}
+.kpi .v{font-size:19px;font-weight:600;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--mut);font-size:12px;margin-top:1px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
+.chart{position:relative;height:320px}
+.chart.sm{height:240px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:12px}
+.scroll{overflow:auto;max-height:520px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left}
+th{color:var(--mut);font-weight:500;position:sticky;top:0;background:var(--card);cursor:pointer;user-select:none}
+td.n,th.n{text-align:right}
+a{color:#9db4ff;text-decoration:none}a:hover{text-decoration:underline}
+.up{color:var(--green)}.dn{color:var(--red)}.mut{color:var(--mut)}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:6px;border:1px solid var(--line);color:var(--mut);margin-left:5px}
+.seg{display:inline-flex;gap:12px;margin:8px 12px 8px 0;flex-wrap:wrap;vertical-align:top}
+.seg:empty{display:none}
+.sel{display:inline-flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--mut)}
+.sel select{background:var(--card);color:var(--txt);border:1px solid #4a5060;border-radius:8px;padding:7px 30px 7px 11px;font:inherit;font-size:14px;cursor:pointer;min-width:150px}
+.sel select:hover,.multi summary:hover{border-color:#7b8cff}
+.multi{position:relative;font-size:14px}
+.multi summary{list-style:none;cursor:pointer;display:inline-flex;flex-direction:column;gap:3px}
+.multi summary::-webkit-details-marker{display:none}
+.multi summary span{font-size:11.5px;color:var(--mut)}
+.multi summary b{font-weight:400;background:var(--card);border:1px solid #4a5060;border-radius:8px;padding:7px 11px;min-width:190px;display:block}
+.multi summary b::after{content:" ▾";color:var(--mut)}
+.multi>div{position:absolute;z-index:6;top:100%;left:0;margin-top:4px;background:var(--card);border:1px solid #4a5060;border-radius:10px;padding:8px;display:grid;gap:2px;min-width:190px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.multi label{padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.multi label:hover{background:#22262e}
+ul.sig{margin:6px 0;padding:0;list-style:none}
+ul.sig li{padding:7px 10px;border-left:3px solid var(--line);margin:5px 0;background:var(--card);border-radius:0 8px 8px 0}
+ul.sig li .ir{margin-left:8px;padding:2px 9px;font-size:12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--blue);cursor:pointer;white-space:nowrap}ul.sig li .ir:hover{background:var(--line)}
+.flash{animation:flash 2.2s ease-out}@keyframes flash{0%,40%{box-shadow:0 0 0 2px #f7b500}100%{box-shadow:0 0 0 2px transparent}}
+ul.sig li.venda{border-color:var(--red)}ul.sig li.compra{border-color:var(--green)}ul.sig li.liquidez{border-color:var(--gold)}ul.sig li.dono{border-color:var(--purple)}ul.sig li.fluxo{border-color:var(--blue)}
+.heat{display:grid;grid-template-columns:44px repeat(24,1fr);gap:2px;font-size:10.5px;color:var(--mut)}
+.heat div{height:22px;border-radius:3px;display:flex;align-items:center;justify-content:center}
+.refbtn{background:linear-gradient(90deg,#ff4b12,#ff7a00);color:#111;font-weight:700;border:0;border-radius:9px;padding:9px 15px;cursor:pointer;font:inherit;font-weight:700;white-space:nowrap}
+.refbtn:hover{filter:brightness(1.08)}
+header .refbtn{margin-left:auto}
+header #status{margin-left:0}
+#ref-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:12px;background:var(--card);border:1px solid #5a3a1a;border-radius:10px;padding:12px 14px;margin:12px 0}
+#ref-faixa .t{flex:1 1 260px}
+.codigo{font:600 16px Consolas,monospace;letter-spacing:1px;background:#0f1115;border:1px dashed #ff7a00;color:#ffb066;border-radius:8px;padding:6px 10px;user-select:all}
+#ref-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:20;align-items:center;justify-content:center;padding:16px}
+#ref-modal.on{display:flex}
+#ref-box{background:var(--card);border:1px solid var(--line);border-radius:14px;max-width:560px;width:100%;padding:20px 22px;max-height:92vh;overflow:auto}
+#ref-box h3{margin:0 0 4px;font-size:18px}
+#ref-box ol{margin:10px 0 12px;padding-left:20px;color:var(--mut)}
+#ref-box ol b{color:var(--txt)}
+.lojas{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
+.loja{background:#0f1115;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center}
+.loja .qr{background:#fff;padding:8px;border-radius:8px;display:inline-block;margin:8px 0}
+.loja a{display:block;background:#262a33;color:#fff;border-radius:8px;padding:8px;text-decoration:none;font-weight:600}
+.loja a:hover{background:#333846}
+.sec{background:transparent;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}
+@media(max-width:520px){.lojas{grid-template-columns:1fr}.loja .qr{display:none}}
+.ajuda{background:transparent;color:#ffb066;border:1px solid #5a3a1a;border-radius:999px;padding:3px 11px;margin-left:8px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:400;vertical-align:middle}
+.ajuda:hover{border-color:#ff7a00}
+.ajuda-txt{max-width:980px;font-size:13.5px}
+.ajuda-txt h4{margin:14px 0 4px;font-size:14px}
+.ajuda-txt h4:first-child{margin-top:2px}
+.ajuda-txt p,.ajuda-txt ul{margin:4px 0;color:#c8ccd4}
+.ajuda-txt ul{padding-left:20px}
+.ajuda-txt b{color:var(--txt)}
+.ajuda-txt th{position:static;cursor:default}
+.ajuda-txt td{white-space:normal}
+.lei-card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.lei-card .p{color:var(--mut);font-size:12.5px}
+.lei-card .r{font-size:22px;font-weight:700;margin:4px 0 8px;text-transform:capitalize}
+.lei-barra{position:relative;height:8px;border-radius:5px;background:linear-gradient(90deg,#ff2d2d,#ff7a59 25%,#6b7280 50%,#2ec4a6 75%,#00d18f)}
+.lei-barra i{position:absolute;top:-4px;width:4px;height:16px;border-radius:2px;background:#fff;box-shadow:0 0 0 2px #0f1115;transform:translateX(-2px)}
+.lei-card .s{color:var(--mut);font-size:12px;margin-top:7px}
+.nota{display:inline-block;min-width:118px;font-weight:600}
+#wait{padding:60px 20px;text-align:center;color:var(--mut);font-size:15px}
+</style>
+</head>
+<body>
+<header>
+  <h1>MONITOR TOKEN <span>VELL</span></h1>
+  <div id="hdr" class="mut"></div>
+  <button class="refbtn" id="ref-btn" style="display:none" onclick="refAbrir()">Baixar carteira Vellora</button>
+  <div id="status">carregando…</div>
+</header>
+<nav id="nav"></nav>
+<div id="wait">Preparando os dados… Na primeira vez o programa baixa todo o histórico da blockchain (10 a 20 minutos).<div id="waitd" style="margin-top:8px"></div></div>
+<div id="wrap">
+<aside id="logo" style="display:none"><img src="/logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div></aside>
+<main id="main" style="display:none">
+
+<section id="t-geral">
+  <h2>Resumo agora</h2>
+  <div class="grid" id="kpis"></div>
+  <h2>Destaques automáticos</h2>
+  <p class="exp">Fatos recentes que o programa encontrou nos dados da blockchain.</p>
+  <ul class="sig" id="sinais"></ul>
+  <h2>Preço em dólar</h2>
+  <div class="seg" data-range="preco"></div>
+  <div class="seg" data-tipo></div>
+  <div class="card"><div class="chart"><canvas id="c-preco"></canvas></div></div>
+  <h2>Liquidez do pool (US$)</h2>
+  <p class="exp">Valor total guardado no pool VELL/BNB. Quanto maior, menos o preço se mexe a cada compra ou venda.</p>
+  <div class="card"><div class="chart sm"><canvas id="c-liq"></canvas></div></div>
+</section>
+
+<section id="t-leitura">
+  <h2>Leitura do mercado <button class="ajuda" id="lei-ajuda-btn" onclick="ajudaLei()">Entenda ▾</button></h2>
+  <p class="exp">Resumo automático do momento do VELL, somando nove sinais de preço e da blockchain. É uma leitura do estado atual dos dados, não uma previsão nem uma recomendação de compra ou venda.</p>
+  <div class="card ajuda-txt" id="lei-ajuda" style="display:none">
+    <h4>Como a leitura é calculada</h4>
+    <p>Cada sinal recebe uma nota de −2 (muito negativo) a +2 (muito positivo). As notas são somadas com pesos diferentes e viram um placar de −100 a +100:</p>
+    <ul><li><b>+50 ou mais:</b> ultra otimista</li><li><b>+15 a +50:</b> otimista</li><li><b>−15 a +15:</b> neutro</li><li><b>−50 a −15:</b> pessimista</li><li><b>−50 ou menos:</b> ultra pessimista</li></ul>
+    <h4>Os prazos</h4>
+    <p>O mesmo cálculo é feito olhando as últimas 24 horas (curto), os últimos 7 dias (médio), os últimos 30 dias (longo), os últimos 365 dias (anual) e todo o histórico desde o lançamento. Eles podem discordar, e isso é informação: por exemplo, curto prazo melhorando dentro de um longo prazo ainda negativo.</p>
+    <p>Enquanto o VELL tiver menos de um ano, o anual e o desde o lançamento olham o mesmo período e dão a mesma leitura. Esses dois servem de contexto e não entram no filtro do prazo maior.</p>
+    <h4>Filtro do prazo maior</h4>
+    <p>Um prazo menor não pode contrariar um prazo maior que esteja no extremo. Se os últimos 7 dias estão "ultra pessimista", as últimas 24 horas chegam no máximo a "neutro", mesmo que os sinais do dia estejam bons. O mesmo vale ao contrário, e entre o médio e o longo prazo. Quando isso acontece, o cartão do prazo avisa.</p>
+    <h4>Limites</h4>
+    <ul><li>Mostra como os dados estão agora. Não garante para onde o preço vai.</li>
+    <li>Os pesos e os cortes são escolhas do programa, não uma regra do mercado.</li>
+    <li>O VELL tem pouca liquidez: uma única carteira grande pode mudar tudo em minutos.</li>
+    <li>Veja o "Teste contra o passado" no fim da página antes de confiar na leitura.</li></ul>
+  </div>
+  <div class="grid" id="lei-cards" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"></div>
+  <h2>Por que deu essa leitura</h2>
+  <div class="seg" id="lei-seg"></div>
+  <div class="card scroll" id="tb-lei" style="max-height:none"></div>
+  <h2>A leitura ao longo do tempo</h2>
+  <p class="exp">O preço do VELL, com a linha pintada pela leitura que o programa teria dado em cada momento, usando só os dados disponíveis até ali.</p>
+  <div class="card"><div class="chart"><canvas id="c-lei"></canvas></div><div class="mut" id="lei-leg" style="font-size:12px;margin-top:6px"></div></div>
+  <h2>Teste contra o passado</h2>
+  <p class="exp" id="lei-teste-txt"></p>
+  <div class="card scroll" id="tb-lei-teste"></div>
+  <h2>Short-Term Holders (holders de curto prazo) <button class="ajuda" id="sth-ajuda-btn" onclick="ajudaSth()">Entenda ▾</button></h2>
+  <p class="exp">Acompanha os VELL que chegaram há pouco tempo nas carteiras: quanto são, quanto custaram e se estão no lucro ou no prejuízo. Quem comprou há pouco costuma reagir mais rápido ao preço do que quem guarda há muito tempo.</p>
+  <div class="card ajuda-txt" id="sth-ajuda" style="display:none">
+    <h4>O que é um holder de curto prazo</h4>
+    <p>O programa guarda, para cada carteira, quando cada lote de VELL chegou e por quanto. Um lote é de curto prazo enquanto tiver menos idade que o limite escolhido no menu (24 horas, 7 dias ou 30 dias). Depois disso ele passa a contar como longo prazo. Quando a carteira vende ou transfere, saem primeiro os lotes mais antigos.</p>
+    <h4>As medidas</h4>
+    <ul>
+      <li><b>VELL em mãos de curto prazo:</b> a soma desses lotes recentes. Sobe quando entra gente nova comprando; desce quando ninguém compra e os lotes envelhecem.</li>
+      <li><b>Preço médio de custo:</b> quanto os holders de curto prazo pagaram em média. Para lotes recebidos por transferência, vale o preço de mercado no momento em que chegaram.</li>
+      <li><b>Preço atual contra o custo:</b> se o preço está acima do custo, quem entrou há pouco está no lucro e tende a segurar; se está abaixo, está no prejuízo e pode vender quando o preço voltar perto do custo.</li>
+      <li><b>Resultado das vendas (SOPR):</b> valor recebido nas vendas de lotes recentes dividido pelo que custaram. Acima de 1,00 vendem com lucro; abaixo de 1,00 vendem com prejuízo. O valor recebido já desconta a taxa de venda do contrato, então no VELL ele tende a ficar abaixo de 1,00.</li>
+    </ul>
+    <h4>O que fica de fora</h4>
+    <p>O pool de liquidez, o contrato do token, endereços de queima, cofres de bloqueio e as carteiras do dono e do criador do contrato não entram na conta.</p>
+    <h4>Limites</h4>
+    <ul><li>O limite clássico desse indicador no Bitcoin é 155 dias. O VELL tem poucas semanas de vida, por isso os limites aqui são curtos.</li>
+    <li>O programa só vê negociações no pool VELL/BNB. Tokens que mudam de carteira por transferência contam como "recém-chegados", mesmo que o dono seja o mesmo.</li></ul>
+  </div>
+  <div class="seg" id="sth-seg"></div>
+  <div class="grid" id="sth-kpis"></div>
+  <h2>Preço do VELL contra o custo dos holders de curto prazo</h2>
+  <div class="card" style="background:#0b0d11"><div class="chart" style="height:400px"><canvas id="c-sth"></canvas></div></div>
+  <div class="two">
+    <div><h2>Parte dos VELL em mãos de curto prazo (%)</h2><div class="card"><div class="chart sm"><canvas id="c-sth-qtd"></canvas></div></div></div>
+    <div><h2>Resultado das vendas de curto prazo por dia (SOPR)</h2><div class="card"><div class="chart sm"><canvas id="c-sth-sopr"></canvas></div></div></div>
+  </div>
+  <h2>Long-Term Holders (holders de longo prazo) <button class="ajuda" id="lth-ajuda-btn" onclick="ajudaLth()">Entenda ▾</button></h2>
+  <p class="exp">Acompanha os VELL que estão parados há mais tempo nas carteiras: quanto são, quanto custaram e quanto disso está sendo vendido. Quando quem segura há muito tempo começa a vender, a oferta no mercado aumenta.</p>
+  <div class="card ajuda-txt" id="lth-ajuda" style="display:none">
+    <h4>O que é um holder de longo prazo</h4>
+    <p>É o contrário do curto prazo: um lote de VELL passa a ser de longo prazo quando fica mais tempo na mesma carteira do que o limite escolhido no menu (7 ou 30 dias). Curto e longo prazo somados dão 100% dos VELL em carteiras.</p>
+    <h4>As medidas</h4>
+    <ul>
+      <li><b>VELL em mãos de longo prazo:</b> a soma dos lotes antigos. Cresce quando os lotes recentes envelhecem sem serem vendidos; diminui quando holders antigos vendem ou transferem.</li>
+      <li><b>Sem custo conhecido:</b> lotes distribuídos antes de as negociações começarem. Não havia preço de mercado, então eles não entram no cálculo do custo nem do lucro.</li>
+      <li><b>Preço médio de custo:</b> quanto pagaram, em média, os lotes antigos que têm custo conhecido.</li>
+      <li><b>Vendas de longo prazo:</b> quanto os holders antigos venderam no pool. É a medida mais importante desta seção: mostra se quem segura há tempo está saindo.</li>
+      <li><b>Resultado das vendas (SOPR):</b> valor recebido dividido pelo custo, só para lotes com custo conhecido. Abaixo de 1,00 vendem com prejuízo. Já desconta a taxa de venda do contrato.</li>
+    </ul>
+    <h4>Limites</h4>
+    <ul><li>No Bitcoin, longo prazo significa mais de 155 dias. O VELL tem poucas semanas, por isso os limites aqui são curtos.</li>
+    <li>Transferir VELL para outra carteira zera a idade do lote: ele volta a contar como curto prazo na carteira de destino.</li>
+    <li>O pool, o contrato, os cofres de bloqueio, a queima e as carteiras do dono e do criador ficam de fora.</li></ul>
+  </div>
+  <div class="seg" id="lth-seg"></div>
+  <div class="grid" id="lth-kpis"></div>
+  <h2>Preço do VELL contra o custo dos holders de longo prazo</h2>
+  <div class="card" style="background:#0b0d11"><div class="chart" style="height:400px"><canvas id="c-lth"></canvas></div></div>
+  <div class="two">
+    <div><h2>Parte dos VELL em mãos de longo prazo (%)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-qtd"></canvas></div></div></div>
+    <div><h2>Vendas de holders de longo prazo por dia (US$)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-venda"></canvas></div></div></div>
+  </div>
+</section>
+
+<section id="t-volume">
+  <h2>Volume negociado</h2>
+  <div class="grid" id="vol-kpis"></div>
+  <h2>Preço e volume por faixa de preço</h2>
+  <p class="exp">As barras deitadas à esquerda mostram quanto foi negociado em cada faixa de preço no período: azul são compras, laranja são vendas. A linha vermelha tracejada é o preço onde mais se negociou. A área roxa é a zona que concentra 70% do volume. Preços com muito volume costumam segurar ou travar o preço quando ele volta ali.</p>
+  <div class="seg" data-range="perfil"></div>
+  <div class="seg" data-tipo></div>
+  <div class="seg" id="perfil-tog"></div>
+  <div class="grid" id="perfil-kpis"></div>
+  <div class="card"><div class="chart" style="height:520px"><canvas id="c-perfil"></canvas></div>
+    <div class="mut" style="font-size:12px;margin-top:6px"><span style="color:#ff4d4f">━</span> preço do VELL &nbsp; <span style="color:#4a8fe8">■</span> compras &nbsp; <span style="color:#f7a935">■</span> vendas &nbsp; <span style="color:#ff4d4f">┅</span> preço mais negociado &nbsp; <span style="color:#b57bff">■</span> zona com 70% do volume</div></div>
+  <h2>Faixas de preço com mais volume no período</h2>
+  <div class="card scroll" id="tb-perfil" style="max-height:330px"></div>
+  <h2>Volume por dia: compras x vendas (US$)</h2>
+  <div class="card"><div class="chart"><canvas id="c-vol"></canvas></div></div>
+  <h2>Saldo líquido por dia (compras − vendas, US$)</h2>
+  <div class="card"><div class="chart sm"><canvas id="c-net"></canvas></div></div>
+  <div class="two">
+    <div><h2>Por semana</h2><div class="card scroll" id="tb-sem"></div></div>
+    <div><h2>Por mês</h2><div class="card scroll" id="tb-mes"></div></div>
+  </div>
+  <div class="two">
+    <div><h2>Por ano</h2><div class="card scroll" id="tb-ano"></div></div>
+    <div><h2>Por dia</h2><div class="card scroll" id="tb-dia"></div></div>
+  </div>
+  <h2>Em que dia e hora se negocia mais</h2>
+  <p class="exp">Volume em dólar por dia da semana e hora (horário de Brasília). Quanto mais forte a cor, mais volume.</p>
+  <div class="card"><div class="heat" id="heat"></div></div>
+</section>
+
+<section id="t-carteiras">
+  <h2>Concentração</h2>
+  <p class="exp">Quanto do fornecimento total está nas maiores carteiras (o pool de liquidez e o contrato ficam de fora das contas "top").</p>
+  <div class="grid" id="conc"></div>
+  <div class="two">
+    <div><h2>Carteiras por tamanho</h2><div class="card" id="tb-faixas"></div></div>
+    <div><h2>Número de holders por dia</h2><div class="card"><div class="chart sm"><canvas id="c-hold"></canvas></div></div></div>
+  </div>
+  <h2>Quem está acumulando e quem está vendendo</h2>
+  <p class="exp">Variação do saldo de cada carteira no período, somando compras, vendas e transferências.</p>
+  <div class="seg" id="mov-seg"></div>
+  <div class="two">
+    <div class="card scroll" id="tb-acum"></div>
+    <div class="card scroll" id="tb-dist"></div>
+  </div>
+  <h2>Maiores holders</h2>
+  <p class="exp">Clique no título de uma coluna para ordenar. "Custo médio" é quanto a carteira pagou em média pelos tokens que ainda tem; "lucro aberto" é o ganho ou perda se vendesse agora.</p>
+  <div class="card scroll" id="tb-top"></div>
+  <h2>Distribuição inicial (quem recebeu direto do dono do contrato)</h2>
+  <p class="exp">Carteiras que receberam VELL direto do dono ou criador do contrato, sem comprar no pool. Mostra quanto ainda guardam e quanto já venderam — é a principal fonte possível de pressão de venda.</p>
+  <div class="grid" id="ini-kpis"></div>
+  <div class="card scroll" id="tb-ini"></div>
+  <h2>Preço de custo dos holders</h2>
+  <p class="exp">Quantos tokens foram comprados em cada faixa de preço e ainda estão guardados. Faixas acima do preço atual são holders no prejuízo (podem vender quando o preço voltar ali); faixas abaixo estão no lucro.</p>
+  <div class="grid" id="custo-kpis"></div>
+  <div class="card"><div class="chart sm"><canvas id="c-custo"></canvas></div></div>
+  <div class="two">
+    <div><h2>Quem mais lucrou</h2><div class="card scroll" id="tb-lucro"></div></div>
+    <div><h2>Quem mais perdeu</h2><div class="card scroll" id="tb-perda"></div></div>
+  </div>
+  <h2>Grupos de carteiras ligadas</h2>
+  <p class="exp">Carteiras que transferiram VELL diretamente entre si, o que sugere o mesmo dono. O saldo do grupo é a soma de todas.</p>
+  <div class="card scroll" id="tb-grupos"></div>
+</section>
+
+<section id="t-fluxo">
+  <h2>Compras e vendas</h2>
+  <div class="seg" id="fluxo-per"></div>
+  <div class="grid" id="fluxo-kpis"></div>
+  <div class="seg" id="fluxo-seg"></div>
+  <p class="exp" id="fluxo-nota"></p>
+  <div class="card scroll" id="tb-trades" style="max-height:640px"></div>
+  <h2>Maiores negociações do período</h2>
+  <div class="card scroll" id="tb-grandes"></div>
+  <h2>Taxa cobrada pelo contrato por dia</h2>
+  <p class="exp">Diferença entre o que saiu do pool e o que chegou na carteira (compra), ou entre o que a carteira enviou e o que entrou no pool (venda). Mudanças aqui indicam alteração nas taxas do token.</p>
+  <div class="card"><div class="chart sm"><canvas id="c-taxa"></canvas></div></div>
+</section>
+
+<section id="t-liquidez">
+  <h2>Pool de liquidez</h2>
+  <div class="grid" id="liq-kpis"></div>
+  <h2>BNB na liquidez</h2>
+  <p class="exp">Quantidade de BNB guardada no pool (só o BNB, sem contar os VELL). Sobe quando alguém compra VELL e desce quando alguém vende.</p>
+  <div class="seg" id="liqb-modo"></div>
+  <div class="seg" data-range="liqb" data-mes></div>
+  <div class="seg" data-tipo id="liqb-tipo"></div>
+  <div class="grid" id="liqb-kpis"></div>
+  <div class="card"><div class="chart"><canvas id="c-liqb"></canvas></div></div>
+  <div class="two">
+    <div><h2>Impacto no preço por tamanho da ordem</h2>
+      <p class="exp">Quanto o seu preço médio piora ao comprar ou vender esse valor de uma vez (sem contar a taxa do token).</p>
+      <div class="card" id="tb-imp"></div></div>
+    <div><h2>Quem é dono da liquidez</h2>
+      <p class="exp">Quem tem as cotas do pool pode retirar a liquidez. Cotas em endereço de queima ou em cofre estão travadas.</p>
+      <div class="card scroll" id="tb-lp"></div></div>
+  </div>
+  <h2>Entradas e saídas de liquidez</h2>
+  <div class="card scroll" id="tb-liqev"></div>
+  <h2>Contrato</h2>
+  <div class="card" id="contrato"></div>
+</section>
+
+<section id="t-bnb">
+  <h2>O VELL acompanha o <span id="rel-nome">BNB</span>? <button class="ajuda" id="bnb-ajuda-btn" onclick="ajudaBnb()">Entenda ▾</button></h2>
+  <div class="card ajuda-txt" id="bnb-ajuda" style="display:none"></div>
+  <div class="seg" id="rel-seg"></div>
+  <div class="card scroll" id="tb-bnb"></div>
+  <h2>VELL x tokens: comparação no período</h2>
+  <p class="exp">Escolha com quais ativos comparar o VELL (pode marcar vários) e o período. Todos partem de 0% no início do período.</p>
+  <div class="seg" id="tok-seg"></div>
+  <div class="seg" data-range="bnb"></div>
+  <div class="card"><div class="chart"><canvas id="c-bnb"></canvas></div></div>
+  <h2>Diferença de valorização no período</h2>
+  <p class="exp">"Diferença" é a variação do VELL menos a do ativo, em pontos percentuais. "VELL medido no ativo" mostra quanto o VELL ganhou ou perdeu de valor em relação àquele ativo — é o resultado de quem trocou o ativo por VELL no início do período.</p>
+  <div class="seg" id="dif-ord"></div>
+  <div class="card scroll" id="tb-dif"></div>
+  <h2>Movimento sobreposto (cada linha da sua mínima à sua máxima)</h2>
+  <div class="card"><div class="chart"><canvas id="c-sobre"></canvas></div></div>
+</section>
+
+</main>
+</div>
+<div id="ref-modal" onclick="if(event.target===this)refFechar()">
+  <div id="ref-box">
+    <h3>Baixe a carteira Vellora</h3>
+    <div class="mut">Guarde e movimente seus VELL pelo aplicativo oficial.</div>
+    <ol>
+      <li><b>Copie o código de indicação:</b> <span class="codigo" id="ref-cod"></span> <button class="sec" id="ref-copiar" onclick="refCopiar()">Copiar</button></li>
+      <li><b>Baixe o aplicativo</b> na loja do seu celular (aponte a câmera para o QR code ou toque no botão).</li>
+      <li><b>No cadastro,</b> cole o código no campo de indicação.</li>
+    </ol>
+    <div class="lojas">
+      <div class="loja"><b>Android</b><br><div class="qr" id="qr-android"></div><a id="lk-android" target="_blank" rel="noopener">Abrir no Google Play</a></div>
+      <div class="loja"><b>iPhone</b><br><div class="qr" id="qr-ios"></div><a id="lk-ios" target="_blank" rel="noopener">Abrir na App Store</a></div>
+    </div>
+    <div class="mut" style="font-size:12px;margin-top:12px">Código de indicação do responsável por este painel.</div>
+    <div style="text-align:right;margin-top:10px"><button class="sec" onclick="refFechar()">Fechar</button></div>
+  </div>
+</div>
+<script>
+let refPronto=false;
+function refAbrir(){
+  const I=D&&D.indicacao;if(!I)return;
+  if(!refPronto){
+    $("ref-cod").textContent=I.codigo;$("lk-android").href=I.android;$("lk-ios").href=I.ios;
+    try{new QRCode($("qr-android"),{text:I.android,width:150,height:150});new QRCode($("qr-ios"),{text:I.ios,width:150,height:150})}catch(e){document.querySelectorAll(".loja .qr").forEach(x=>x.style.display="none")}
+    refPronto=true}
+  $("ref-modal").classList.add("on")}
+function refFechar(){$("ref-modal").classList.remove("on")}
+function refCopiar(bt){
+  const c=D.indicacao.codigo,ok=()=>{document.querySelectorAll(".ref-cp,#ref-copiar").forEach(b=>{b.textContent="Copiado!";setTimeout(()=>b.textContent="Copiar",1800)})};
+  if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(c).then(ok,()=>refCopiaAntiga(c,ok));else refCopiaAntiga(c,ok)}
+function refCopiaAntiga(c,ok){const t=document.createElement("textarea");t.value=c;document.body.appendChild(t);t.select();try{document.execCommand("copy");ok()}catch(e){}t.remove()}
+document.addEventListener("keydown",e=>{if(e.key==="Escape")refFechar()});
+document.addEventListener("click",e=>{document.querySelectorAll("details.multi[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});
+const $=id=>document.getElementById(id);
+const TABS=[["geral","Visão geral"],["volume","Volume"],["carteiras","Baleias e carteiras"],["fluxo","Compras e vendas"],["liquidez","Liquidez e contrato"],["bnb","VELL x tokens"],["leitura","Leitura do mercado"]];
+let D=null, tab=localStorage.getItem("vell_tab")||"geral", charts={}, range={preco:"7d",bnb:"7d",perfil:"tudo",liqb:"30d"}, showPerfil=true, lthK=localStorage.getItem("vell_lth")||"30d", sthK=localStorage.getItem("vell_sth")||"7d", leiPz="curto", relRef=localStorage.getItem("vell_relref")||"BNB", liqModo=localStorage.getItem("vell_liqmodo")||"bnb", sel=(()=>{try{return JSON.parse(localStorage.getItem("vell_sel"))||["BNB"]}catch(e){return ["BNB"]}})(), tipo=localStorage.getItem("vell_tipo")||"linha", vela=localStorage.getItem("vell_vela")||"auto", movWin="24h", fluxoF="todas", fluxoPer="24h";
+const nf=(n,d=0)=>n==null||isNaN(n)?"—":n.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+const usd=(n,d)=>n==null||isNaN(n)?"—":"US$ "+nf(n,d??(Math.abs(n)<1?(Math.abs(n)<0.01?6:4):Math.abs(n)<100?2:0));
+const pc=(n,d=1)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${nf(n,d)}%</span>`;
+const sg=(n,f)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${f(n)}</span>`;
+const big=n=>n==null?"—":Math.abs(n)>=1e6?nf(n/1e6,2)+" mi":Math.abs(n)>=1e3?nf(n/1e3,1)+" mil":nf(n,0);
+const tz=()=> (D?.tz??-3)*3600;
+const dtm=ts=>{if(!ts)return"—";const d=new Date((ts+tz())*1000);const p=x=>String(x).padStart(2,"0");return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
+const dia=s=>{const [y,m,d]=s.split("-");return d?`${d}/${m}`:(m?`${m}/${y}`:y)};
+const ago=ts=>{if(!ts)return"—";const s=Date.now()/1000-ts;return s<3600?Math.round(s/60)+" min":s<86400?Math.round(s/3600)+" h":Math.round(s/86400)+" d"};
+const addr=(a,lab)=>!a?"—":`<a href="https://bscscan.com/token/${D.token}?a=${a}" target="_blank" title="${a}">${a.slice(0,6)}…${a.slice(-4)}</a>${lab?`<span class="tag">${lab}</span>`:""}`;
+const txl=h=>`<a href="https://bscscan.com/tx/${h}" target="_blank">ver</a>`;
+
+function table(el,cols,rows,opt={}){
+  el=typeof el==="string"?$(el):el;
+  const st=el._sort||opt.sort||null;
+  let rs=rows.slice();
+  if(st){const c=cols[st.i];if(c&&c.s)rs.sort((a,b)=>{const x=c.s(a),y=c.s(b);return (x==null)-(y==null)||(x<y?-1:x>y?1:0)*(st.d)})}
+  el.innerHTML=`<table><thead><tr>${cols.map((c,i)=>`<th class="${c.n?'n':''}" data-i="${i}">${c.t}${st&&st.i===i?(st.d>0?" ▲":" ▼"):""}</th>`).join("")}</tr></thead><tbody>${rs.map(r=>`<tr>${cols.map(c=>`<td class="${c.n?'n':''}">${c.f(r)}</td>`).join("")}</tr>`).join("")||`<tr><td colspan="${cols.length}" class="mut">Sem dados neste período.</td></tr>`}</tbody></table>`;
+  el.querySelectorAll("th").forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(!cols[i].s)return;el._sort={i,d:el._sort&&el._sort.i===i?-el._sort.d:-1};table(el,cols,rows,opt)});
+}
+function kpis(id,items){$(id).innerHTML=items.map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div>${k[2]?`<div class="s">${k[2]}</div>`:""}</div>`).join("")}
+const selHtml=(label,opts,cur,k="")=>`<label class="sel"><span>${label}</span><select data-k="${k}">${opts.map(o=>`<option value="${o[0]}"${o[0]===cur?" selected":""}>${o[1]}</option>`).join("")}</select></label>`;
+function seg(el,opts,cur,cb,label="Período"){el.innerHTML=selHtml(label,opts,cur);el.querySelector("select").onchange=e=>cb(e.target.value)}
+function chart(id,cfg){if(charts[id])charts[id].destroy();const c=cfg;c.options=Object.assign({responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:"index",intersect:false}},c.options||{});
+  c.options.plugins=Object.assign({legend:{labels:{color:"#c8ccd4",boxWidth:14}}},c.options.plugins||{});
+  c.options.scales=c.options.scales||{};for(const k of ["x","y"]){c.options.scales[k]=Object.assign({grid:{color:"#22262e"},ticks:{color:"#9aa0aa",maxTicksLimit:k==="x"?10:7}},c.options.scales[k]||{})}
+  charts[id]=new Chart($(id),c)}
+const line=(label,data,color,extra={})=>Object.assign({label,data,borderColor:color,backgroundColor:color,borderWidth:2,pointRadius:0,tension:.15},extra);
+const RNG={"24h":24,"7d":168,"30d":720,"tudo":1e9,"mensal":1e9,get mes(){const n=D.gerado_em,d=new Date((n+tz())*1000),ini=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)/1000-tz();return Math.max(2,Math.ceil((n-ini)/3600))},
+  get ano(){const n=D.gerado_em,d=new Date((n+tz())*1000),ini=Date.UTC(d.getUTCFullYear(),0,1)/1000-tz();return Math.max(2,Math.ceil((n-ini)/3600))}};
+const PERIODOS=[["24h","24 horas"],["7d","7 dias"],["30d","30 dias"],["mes","Este mês"],["mensal","Mensal (um ponto por mês)"],["ano","Anual (este ano)"],["tudo","Desde o lançamento"]];
+const mesKey=ts=>{const d=new Date((ts+tz())*1000);return d.getUTCFullYear()*12+d.getUTCMonth()};
+const mesLbl=ts=>{const d=new Date((ts+tz())*1000);return ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][d.getUTCMonth()]+"/"+String(d.getUTCFullYear()).slice(2)};
+// horas do período; no "mensal" devolve só o último ponto de cada mês. h.idx guarda a posição de cada ponto em D.horas
+const hrs=k=>{const A=D.horas;if(k==="mensal"){const idx=[];A.forEach((x,i)=>{if(i===A.length-1||mesKey(A[i+1][0])!==mesKey(x[0]))idx.push(i)});const h=idx.map(i=>A[i]);h.idx=idx;h.mensal=true;return h}
+  const n=Math.min(RNG[k]+1,A.length),h=A.slice(-n);h.idx=h.map((_,i)=>A.length-n+i);return h};
+const hl=h=>h.mensal?h.map(x=>mesLbl(x[0])):h.map(x=>dtm(Math.min(x[0]+3600,D.gerado_em)));   // cada ponto é o preço no fim da hora (ou do mês)
+
+function velas(k,src){
+  src=src||D.velas;
+  if(k==="mensal"){const out=[];let cur=null,key=null;   // um candle por mês
+    for(const x of src){const g=mesKey(x[0]);if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
+    out.mensal=true;return out}
+  const n=Math.min(RNG[k],src.length),v=src.slice(-n),step=vela==="auto"?(n<=48?1:n<=200?4:24):+vela;
+  if(step===1)return v;
+  const out=[];let cur=null,key=null;
+  for(const x of v){const g=Math.floor((x[0]+tz())/(step*3600));if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
+  return out}
+function precoCfg(k,extraY={},S={}){
+  const fm=S.fmt||(x=>usd(x,6)),tk=S.tick||(x=>nf(x,5)),cor=S.cor||"#ff4d4f";
+  if(tipo==="candles"){
+    const v=velas(k,S.velas),col=v.map(x=>x[4]>=x[1]?"#2ec4a6":"#ff4d4f"),lo=Math.min(...v.map(x=>x[3])),hi=Math.max(...v.map(x=>x[2]));
+    return {lo,hi,cfg:{type:"bar",data:{labels:v.map(x=>v.mensal?mesLbl(x[0]):dtm(x[0])),datasets:[
+      {label:"pavio",data:v.map(x=>[x[3],x[2]]),backgroundColor:col,barThickness:1.5,grouped:false,order:2},
+      {label:"corpo",data:v.map(x=>[Math.min(x[1],x[4]),Math.max(x[1],x[4])]),backgroundColor:col,barPercentage:.85,categoryPercentage:.95,grouped:false,minBarLength:1.5,order:1}]},
+      options:{plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===1,callbacks:{label:c=>{const x=v[c.dataIndex];return [`Abertura: ${fm(x[1])}`,`Máxima: ${fm(x[2])}`,`Mínima: ${fm(x[3])}`,`Fechamento: ${fm(x[4])}`,`Variação: ${nf((x[4]/x[1]-1)*100,2)}%`]}}}},scales:{y:Object.assign({ticks:{callback:tk}},extraY)}}}}}
+  const h=hrs(k),v=h.map(S.linha||(x=>x[1])),lb=hl(h);
+  if(!S.linha&&h.length&&(h.mensal||h[0][0]===D.horas[0][0])){v.unshift(D.velas[0][1]);lb.unshift(h.mensal?"lançamento":dtm(D.lancamento))}   // começa no preço de lançamento
+  return {lo:Math.min(...v),hi:Math.max(...v),cfg:{type:"line",data:{labels:lb,datasets:[line(S.nome||"VELL (US$)",v,cor,{borderWidth:2.4,fill:tipo==="area",backgroundColor:tipo==="area"?cor+"29":cor})]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${fm(c.parsed.y)}`}}},scales:{y:Object.assign({ticks:{callback:tk}},extraY)}}}}}
+function precoChart(id,k,opt={}){
+  const c=precoCfg(k,opt.y||{},opt.S||{}),lo=Math.min(c.lo,opt.lo??c.lo),hi=Math.max(c.hi,opt.hi??c.hi),pad=(hi-lo)*0.04||hi*0.01;
+  c.cfg.options.scales.y.min=lo-pad;c.cfg.options.scales.y.max=hi+pad;
+  if(opt.plugins)c.cfg.plugins=opt.plugins;
+  chart(id,c.cfg)}
+function rGeral(){
+  const r=D.resumo,v=D.volume.rolante["24h"],f=D.fluxo;
+  kpis("kpis",[
+   ["Preço",usd(r.preco,6),`${nf(r.preco_bnb*1e6,3)} milionésimos de BNB`],
+   ["Variação 1 hora",pc(r.var_1h,2)],["Variação 24 horas",pc(r.var_24h)],["Variação 7 dias",pc(r.var_7d)],["Variação 30 dias",pc(r.var_30d)],
+   ["Desde o lançamento",pc(r.var_lancamento),`começou em ${usd(r.preco_lancamento,5)}`],
+   ["Valor de mercado",usd(r.valor_mercado,0),`${big(r.circulante)} VELL em circulação`],
+   ["Liquidez no pool",usd(r.liquidez_usd,0),`${nf(r.liq_sobre_mcap,1)}% do valor de mercado`],
+   ["Holders",nf(r.holders),`${nf(r.n_trades)} negociações na história`],
+   ["Volume 24h",usd(v.volume_usd,0),`${v.n_compra} compras · ${v.n_venda} vendas`],
+   ["Saldo líquido 24h",sg(v.liquido_usd,x=>usd(Math.abs(x),0).replace("US$ ",x<0?"−US$ ":"US$ ")),"compras menos vendas"],
+   ["Taxa do contrato",`${f.taxa_compra==null?"—":nf(f.taxa_compra*100,1)+"%"} / ${f.taxa_venda==null?"—":nf(f.taxa_venda*100,1)+"%"}`,"compra / venda"],
+   ["BNB",usd(r.bnb_usd,2)],
+  ].concat(D.leitura&&D.leitura.prazos&&D.leitura.prazos.curto?[["Leitura de curto prazo",`<span style="color:${LCOR[D.leitura.prazos.curto.rotulo]};text-transform:capitalize">${D.leitura.prazos.curto.rotulo}</span>`,"veja a aba Leitura do mercado"]]:[]));
+  $("sinais").innerHTML=D.sinais.map((s,i)=>`<li class="${s.tipo}">${s.txt}${s.ir?` <button class="ir" onclick="irPara(${i})">confira aqui</button>`:""}</li>`).join("")||`<li class="mut">Nenhum destaque no momento.</li>`;
+  const h=hrs(range.preco);
+  precoChart("c-preco",range.preco);
+  const a=D.horas;
+  chart("c-liq",{type:"line",data:{labels:hl(a),datasets:[line("Liquidez (US$)",a.map(x=>x[4]),"#f7b500",{fill:true,backgroundColor:"rgba(247,181,0,.12)"})]},options:{plugins:{legend:{display:false}}}});
+}
+function perfilPlugin(P){return {id:"perfil",beforeDatasetsDraw(ch){
+  if(!P||!showPerfil)return;const c=ch.ctx,a=ch.chartArea,y=ch.scales.y,mx=Math.max(...P.faixas.map(f=>f.compra+f.venda))||1,W=a.width*0.42;
+  c.save();c.beginPath();c.rect(a.left,a.top,a.width,a.height);c.clip();
+  const z1=y.getPixelForValue(P.zona_max),z2=y.getPixelForValue(P.zona_min);
+  c.fillStyle="rgba(181,123,255,.10)";c.fillRect(a.left,z1,a.width,z2-z1);c.strokeStyle="rgba(181,123,255,.55)";c.lineWidth=1;c.strokeRect(a.left+.5,z1,a.width-1,z2-z1);
+  for(const f of P.faixas){const t=y.getPixelForValue(f.ate),b=y.getPixelForValue(f.de),h=Math.max(1,b-t-1),wc=f.compra/mx*W,wv=f.venda/mx*W;
+    c.fillStyle="rgba(74,143,232,.85)";c.fillRect(a.left,t,wc,h);c.fillStyle="rgba(247,169,53,.85)";c.fillRect(a.left+wc,t,wv,h)}
+  const py=y.getPixelForValue(P.poc);c.strokeStyle="#ff4d4f";c.lineWidth=1.5;c.setLineDash([6,4]);c.beginPath();c.moveTo(a.left,py);c.lineTo(a.right,py);c.stroke();c.setLineDash([]);
+  c.fillStyle="#ff4d4f";c.font="12px Segoe UI";c.textAlign="right";c.fillText("mais negociado: "+usd(P.poc,5),a.right-6,py-5);
+  c.restore()}}}
+function rPerfil(){
+  const P=D.volume.perfil[range.perfil==="mensal"?"tudo":range.perfil],h=hrs(range.perfil),r=D.resumo;
+  seg($("perfil-tog"),[["1","Mostrar volume por preço"],["0","Só o preço"]],showPerfil?"1":"0",v=>{showPerfil=v==="1";rPerfil()},"Mostrar");
+  if(!P){$("perfil-kpis").innerHTML="";$("tb-perfil").innerHTML='<span class="mut">Poucas negociações neste período.</span>';if(charts["c-perfil"]){charts["c-perfil"].destroy();delete charts["c-perfil"]}return}
+  const vc=P.faixas.reduce((t,f)=>t+f.compra,0),vv=P.faixas.reduce((t,f)=>t+f.venda,0);
+  const dif=(r.preco/P.poc-1)*100,dentro=r.preco>=P.zona_min&&r.preco<=P.zona_max;
+  kpis("perfil-kpis",[["Preço mais negociado",usd(P.poc,5),`${usd(P.poc_usd,0)} nessa faixa`],["Preço atual em relação a ele",pc(dif),dif<0?"abaixo do preço mais negociado":"acima do preço mais negociado"],["Zona com 70% do volume",`${usd(P.zona_min,5)} a ${usd(P.zona_max,5)}`,dentro?"o preço atual está dentro dela":r.preco<P.zona_min?"o preço atual está abaixo dela":"o preço atual está acima dela"],["Volume no período",usd(P.total,0)],
+   ["Compras x vendas no período",`<span class="${vc>=vv?"up":"dn"}">${vc>=vv?"+":"−"}US$ ${nf(Math.abs(vc-vv),0)}</span>`,`compras ${usd(vc,0)} · vendas ${usd(vv,0)}<br>${vc>=vv?"compradores":"vendedores"} na frente por ${nf(Math.abs(vc-vv)/(P.total||1)*100,1)}% do volume`]]);
+  precoChart("c-perfil",range.perfil,{lo:P.min,hi:P.max,y:{position:"right"},plugins:[perfilPlugin(P)]});
+  const tot=P.total||1,fx=P.faixas.filter(f=>f.n>0);
+  table("tb-perfil",[{t:"Faixa de preço",f:f=>`${usd(f.de,5)} a ${usd(f.ate,5)}`,s:f=>f.de},{t:"Volume",n:1,f:f=>usd(f.compra+f.venda,0),s:f=>f.compra+f.venda},{t:"% do período",n:1,f:f=>nf((f.compra+f.venda)/tot*100,1)+"%",s:f=>f.compra+f.venda},{t:"Compras",n:1,f:f=>usd(f.compra,0),s:f=>f.compra},{t:"Vendas",n:1,f:f=>usd(f.venda,0),s:f=>f.venda},{t:"Negócios",n:1,f:f=>nf(f.n),s:f=>f.n},{t:"Em relação ao preço atual",n:1,f:f=>pc(((f.de+f.ate)/2/r.preco-1)*100),s:f=>f.de}],fx,{sort:{i:1,d:-1}});
+}
+const volCols=[{t:"Período",f:r=>dia(r.periodo),s:r=>r.periodo},{t:"Volume",n:1,f:r=>usd(r.volume_usd,0),s:r=>r.volume_usd},{t:"Compras",n:1,f:r=>usd(r.compra_usd,0),s:r=>r.compra_usd},{t:"Vendas",n:1,f:r=>usd(r.venda_usd,0),s:r=>r.venda_usd},{t:"Líquido",n:1,f:r=>sg(r.liquido_usd,x=>nf(x,0)),s:r=>r.liquido_usd},{t:"Negócios",n:1,f:r=>nf(r.n),s:r=>r.n},{t:"Compradores",n:1,f:r=>nf(r.compradores),s:r=>r.compradores},{t:"Vendedores",n:1,f:r=>nf(r.vendedores),s:r=>r.vendedores},{t:"Valor médio",n:1,f:r=>usd(r.ticket_medio,0),s:r=>r.ticket_medio}];
+const LCOR={"ultra otimista":"#00d18f","otimista":"#2ec4a6","neutro":"#9aa0aa","pessimista":"#ff7a59","ultra pessimista":"#ff2d2d"};
+const leiRot=sc=>sc==null?null:sc>=50?"ultra otimista":sc>=15?"otimista":sc>-15?"neutro":sc>-50?"pessimista":"ultra pessimista";
+function ajudaLei(){const e=$("lei-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("lei-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+function rLeitura(){
+  rSth();rLth();
+  const L=D.leitura||{},P=L.prazos||{},ord=["curto","medio","longo","anual","tudo"].filter(k=>P[k]);
+  if(!ord.length){$("lei-cards").innerHTML='<div class="mut">Ainda não há histórico suficiente para calcular a leitura.</div>';return}
+  if(!P[leiPz])leiPz=ord[0];
+  $("lei-cards").innerHTML=ord.map(k=>{const x=P[k];return `<div class="lei-card" style="border-color:${LCOR[x.rotulo]}66"><div class="p">${x.nome} · ${x.janela}</div><div class="r" style="color:${LCOR[x.rotulo]}">${x.rotulo}</div><div class="lei-barra"><i style="left:${(x.score+100)/2}%"></i></div><div class="s">Placar: ${x.score>0?"+":""}${nf(x.score,0)} (de −100 a +100)</div>${x.ajuste?`<div class="s" style="color:#ffb066">${x.ajuste}</div>`:""}</div>`}).join("");
+  seg($("lei-seg"),ord.map(k=>[k,`${P[k].nome} (${P[k].janela})`]),leiPz,v=>{leiPz=v;rLeitura()},"Prazo");
+  const X=P[leiPz],nt=n=>n>=1.5?"muito positivo":n>=0.5?"positivo":n>-0.5?"neutro":n>-1.5?"negativo":"muito negativo",nc=n=>n>=0.5?"up":n<=-0.5?"dn":"mut";
+  table("tb-lei",[{t:"Sinal",f:r=>`<b>${r.nome}</b>`},{t:"Nota",f:r=>`<span class="nota ${nc(r.nota)}">${nt(r.nota)}</span> <span class="mut">${r.nota>0?"+":""}${nf(r.nota,1)}</span>`,s:r=>r.nota},{t:"Peso",n:1,f:r=>nf(r.peso,1),s:r=>r.peso},{t:"O que os dados mostram",f:r=>`<span style="white-space:normal">${r.txt}</span>`}],X.sinais);
+  const H=L.historico||[],ci={curto:2,medio:3,longo:4,anual:5,tudo:6}[leiPz];
+  chart("c-lei",{type:"line",data:{labels:H.map(x=>dtm(x[0])),datasets:[{label:"VELL (US$)",data:H.map(x=>x[1]),borderWidth:3,pointRadius:0,tension:.15,borderColor:"#555b66",
+    segment:{borderColor:c=>{const r=leiRot(H[c.p1DataIndex][ci]);return r?LCOR[r]:"#3a3f4a"}}}]},
+    options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const h=H[c.dataIndex],r=leiRot(h[ci]);return [`Preço: ${usd(h[1],6)}`,r?`Leitura: ${r} (${h[ci]>0?"+":""}${nf(h[ci],0)})`:"Leitura: sem histórico suficiente"]}}}},scales:{y:{ticks:{callback:x=>nf(x,5)}}}}});
+  $("lei-leg").innerHTML=(L.rotulos||[]).slice().reverse().map(r=>`<span style="color:${LCOR[r]}">━</span> ${r}`).join(" &nbsp; ")+` &nbsp; <span style="color:#3a3f4a">━</span> sem histórico suficiente`;
+  const T=(L.teste||{})[leiPz];
+  if(T){
+    $("lei-teste-txt").innerHTML=`Para cada momento do passado (a cada 6 horas), o programa calculou qual teria sido a leitura de ${X.nome.toLowerCase()} e comparou com o que o preço fez nos(as) <b>${T.depois}</b> seguintes. Foram ${nf(T.n)} casos. As amostras se sobrepõem e quase todo o histórico do VELL é de queda, então trate estes números como indicação, não como prova.${T.mudou?` O filtro do prazo maior mudou ${nf(T.mudou)} dessas leituras.`:""}`;
+    table("tb-lei-teste",[{t:"Leitura dada",f:r=>`<b style="color:${LCOR[r.rotulo]};text-transform:capitalize">${r.rotulo}</b>`},{t:"Quantas vezes",n:1,f:r=>nf(r.n),s:r=>r.n},{t:"Vezes em que o preço subiu depois",n:1,f:r=>r.subiu_pct==null?"—":nf(r.subiu_pct,0)+"%",s:r=>r.subiu_pct},{t:"Variação média depois",n:1,f:r=>pc(r.media),s:r=>r.media},{t:"Variação mediana depois",n:1,f:r=>pc(r.mediana),s:r=>r.mediana}],T.linhas)}
+}
+function rVolume(){
+  const R=D.volume.rolante,V=D.volume;
+  kpis("vol-kpis",[["Últimas 24 horas","24h"],["Últimos 7 dias","7d"],["Últimos 30 dias","30d"],["Últimos 12 meses","365d"]].map(([t,k])=>[t,usd(R[k].volume_usd,0),`${nf(R[k].n)} negócios · líquido ${R[k].liquido_usd>=0?"+":"−"}${nf(Math.abs(R[k].liquido_usd),0)}`]));
+  rPerfil();
+  const d=V.diario;
+  chart("c-vol",{type:"bar",data:{labels:d.map(x=>dia(x.periodo)),datasets:[{label:"Compras",data:d.map(x=>x.compra_usd),backgroundColor:"#2ec4a6",stack:"a"},{label:"Vendas",data:d.map(x=>x.venda_usd),backgroundColor:"#ff4d4f",stack:"a"}]},options:{scales:{x:{stacked:true},y:{stacked:true}}}});
+  chart("c-net",{type:"bar",data:{labels:d.map(x=>dia(x.periodo)),datasets:[{label:"Líquido",data:d.map(x=>x.liquido_usd),backgroundColor:d.map(x=>x.liquido_usd>=0?"#2ec4a6":"#ff4d4f")}]},options:{plugins:{legend:{display:false}}}});
+  table("tb-sem",volCols,V.semanal,{sort:{i:0,d:-1}});table("tb-mes",volCols,V.mensal,{sort:{i:0,d:-1}});table("tb-ano",volCols,V.anual,{sort:{i:0,d:-1}});table("tb-dia",volCols,d,{sort:{i:0,d:-1}});
+  const mx=Math.max(1,...V.calor.flat()),dn=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
+  let h=`<div></div>`+[...Array(24).keys()].map(i=>`<div>${i}h</div>`).join("");
+  V.calor.forEach((row,i)=>{h+=`<div>${dn[i]}</div>`+row.map((v,j)=>`<div title="${dn[i]} ${j}h: ${usd(v,0)}" style="background:rgba(255,77,79,${(0.06+0.94*Math.sqrt(v/mx)).toFixed(3)})"></div>`).join("")});
+  $("heat").innerHTML=h;
+}
+function rCarteiras(){
+  const C=D.carteiras,c=C.concentracao;
+  kpis("conc",[["10 maiores carteiras",nf(c.top10,1)+"%"],["20 maiores",nf(c.top20,1)+"%"],["50 maiores",nf(c.top50,1)+"%"],["100 maiores",nf(c.top100,1)+"%"],["No pool de liquidez",nf(c.pool_pct,2)+"%"],["Travado em cofre",nf(c.cofre_pct,2)+"%","tokens presos em cofre de bloqueio"]]);
+  table("tb-faixas",[{t:"Faixa",f:r=>({baleia:"Baleia (1% ou mais)","tubarão":"Tubarão (0,1% a 1%)",peixe:"Peixe (0,01% a 0,1%)","camarão":"Camarão (menos de 0,01%)"})[r.faixa]},{t:"Carteiras",n:1,f:r=>nf(r.n)},{t:"VELL",n:1,f:r=>big(r.tokens)},{t:"% do total",n:1,f:r=>nf(r.pct,2)+"%"}],C.faixas);
+  const hs=C.holders_serie;
+  chart("c-hold",{data:{labels:hs.map(x=>dia(x.dia)),datasets:[Object.assign(line("Holders",hs.map(x=>x.holders),"#7b8cff"),{type:"line",yAxisID:"y"}),{type:"bar",label:"Novos no dia",data:hs.map(x=>x.novos),backgroundColor:"rgba(46,196,166,.55)",yAxisID:"y"}]}});
+  seg($("mov-seg"),PERIODOS.filter(x=>x[0]!=="mensal"),movWin,v=>{movWin=v;rCarteiras()});
+  const M=C["mov_"+movWin],mc=t=>[{t,f:r=>addr(r.end,r.rotulo)},{t:"Variação (VELL)",n:1,f:r=>sg(r.delta,x=>big(x)),s:r=>r.delta},{t:"Em US$",n:1,f:r=>sg(r.delta_usd,x=>nf(x,0)),s:r=>r.delta_usd},{t:"Saldo atual",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"% do total",n:1,f:r=>nf(r.pct,3)+"%",s:r=>r.pct}];
+  table("tb-acum",mc("Quem mais acumulou"),M.acumulou);table("tb-dist",mc("Quem mais reduziu"),M.distribuiu);
+  table("tb-top",[{t:"#",n:1,f:r=>C.top.indexOf(r)+1,s:r=>C.top.indexOf(r)},{t:"Carteira",f:r=>addr(r.end,r.rotulo||(r.tipo==="contrato"?"contrato":""))},{t:"Faixa",f:r=>r.faixa},
+   {t:"Saldo",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"% total",n:1,f:r=>nf(r.pct,2)+"%",s:r=>r.pct},{t:"Valor",n:1,f:r=>usd(r.usd,0),s:r=>r.usd},
+   {t:"Var. 24h",n:1,f:r=>sg(r.d24,big),s:r=>r.d24},{t:"Var. 7d",n:1,f:r=>sg(r.d7,big),s:r=>r.d7},{t:"Var. 30d",n:1,f:r=>sg(r.d30,big),s:r=>r.d30},
+   {t:"Comprou (US$)",n:1,f:r=>nf(r.comprou_usd,0),s:r=>r.comprou_usd},{t:"Vendeu (US$)",n:1,f:r=>nf(r.vendeu_usd,0),s:r=>r.vendeu_usd},
+   {t:"Custo médio",n:1,f:r=>r.custo_medio?usd(r.custo_medio,5):"—",s:r=>r.custo_medio},{t:"Lucro aberto",n:1,f:r=>sg(r.lucro_aberto,x=>nf(x,0)),s:r=>r.lucro_aberto},{t:"Lucro realizado",n:1,f:r=>sg(r.lucro_realizado,x=>nf(x,0)),s:r=>r.lucro_realizado},
+   {t:"Origem",f:r=>r.origem},{t:"Primeira vez",f:r=>dtm(r.primeira),s:r=>r.primeira},{t:"Última atividade",f:r=>"há "+ago(r.ultima),s:r=>r.ultima}],C.top);
+  const I=C.iniciais;
+  kpis("ini-kpis",[["Carteiras que receberam",nf(I.n)],["Total recebido",big(I.recebido)+" VELL",nf(I.pct_recebido,1)+"% do fornecimento"],["Ainda guardam",big(I.saldo)+" VELL",nf(I.pct_saldo,1)+"% do fornecimento"],["Já venderam no pool",usd(I.vendido_usd,0)]]);
+  table("tb-ini",[{t:"Carteira",f:r=>addr(r.end,r.rotulo||(r.tipo==="contrato"?"contrato":""))},{t:"Recebeu",n:1,f:r=>big(r.recebeu),s:r=>r.recebeu},{t:"% total",n:1,f:r=>nf(r.pct_recebido,2)+"%",s:r=>r.pct_recebido},{t:"Saldo atual",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"% total hoje",n:1,f:r=>nf(r.pct_saldo,2)+"%",s:r=>r.pct_saldo},{t:"Vendeu no pool",n:1,f:r=>big(r.vendeu),s:r=>r.vendeu},{t:"Vendeu (US$)",n:1,f:r=>nf(r.vendeu_usd,0),s:r=>r.vendeu_usd},{t:"Enviou a outras",n:1,f:r=>big(r.enviou),s:r=>r.enviou},{t:"Var. 7d",n:1,f:r=>sg(r.d7,big),s:r=>r.d7},{t:"Última atividade",f:r=>"há "+ago(r.ultima),s:r=>r.ultima}],I.lista);
+  const K=C.custo;
+  kpis("custo-kpis",[["Tokens comprados em lucro",nf(K.pct_lucro,2)+"%","do fornecimento total"],["Tokens comprados em prejuízo",nf(K.pct_prejuizo,2)+"%","do fornecimento total"],["Recebidos sem custo",nf(K.pct_sem_custo,1)+"%","vieram por transferência, não por compra"]]);
+  chart("c-custo",{type:"bar",data:{labels:K.faixas.map(x=>usd(x.preco,5)),datasets:[{label:"VELL comprados nessa faixa e ainda guardados",data:K.faixas.map(x=>x.tokens),backgroundColor:K.faixas.map(x=>x.rel>0?"#ff4d4f":"#2ec4a6")}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{afterLabel:c=>`${nf(K.faixas[c.dataIndex].rel,0)}% em relação ao preço atual`}}}}});
+  const lc=[{t:"Carteira",f:r=>addr(r.end,r.rotulo)},{t:"Resultado total",n:1,f:r=>sg(r.total,x=>nf(x,0)),s:r=>r.total},{t:"Realizado",n:1,f:r=>sg(r.realizado,x=>nf(x,0)),s:r=>r.realizado},{t:"Aberto",n:1,f:r=>sg(r.aberto,x=>nf(x,0)),s:r=>r.aberto},{t:"Comprou (US$)",n:1,f:r=>nf(r.comprou_usd,0),s:r=>r.comprou_usd},{t:"Vendeu (US$)",n:1,f:r=>nf(r.vendeu_usd,0),s:r=>r.vendeu_usd},{t:"Saldo",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"Negócios",n:1,f:r=>nf(r.n),s:r=>r.n}];
+  table("tb-lucro",lc,C.lucro_top);table("tb-perda",lc,C.lucro_pior);
+  table("tb-grupos",[{t:"Carteiras",n:1,f:r=>r.n,s:r=>r.n},{t:"Saldo do grupo",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"% total",n:1,f:r=>nf(r.pct,2)+"%",s:r=>r.pct},{t:"Valor",n:1,f:r=>usd(r.usd,0),s:r=>r.usd},{t:"Comprou (US$)",n:1,f:r=>nf(r.comprou_usd,0),s:r=>r.comprou_usd},{t:"Vendeu (US$)",n:1,f:r=>nf(r.vendeu_usd,0),s:r=>r.vendeu_usd},{t:"Var. 7d",n:1,f:r=>sg(r.d7,big),s:r=>r.d7},{t:"Membros (maiores)",f:r=>r.membros.slice(0,5).map(m=>addr(m.end)).join(" · ")+(r.n>5?` · +${r.n-5}`:"")}],C.grupos);
+}
+function ajudaSth(){const e=$("sth-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("sth-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+function rSth(){
+  const S=D.sth||{},nomes={"1d":"24 horas","7d":"7 dias","30d":"30 dias"},ks=Object.keys(nomes).filter(k=>S[k]);
+  if(!ks.length){$("sth-kpis").innerHTML='<div class="mut">Sem dados suficientes para este indicador.</div>';return}
+  if(!S[sthK])sthK=ks[0];
+  seg($("sth-seg"),ks.map(k=>[k,"menos de "+nomes[k]]),sthK,v=>{sthK=v;localStorage.setItem("vell_sth",v);rSth()},"Curto prazo = VELL recebido há");
+  const A=S[sthK].agora,Z=S[sthK].serie,dif=A.mvrv==null?null:(A.mvrv-1)*100;
+  kpis("sth-kpis",[
+    ["VELL em mãos de curto prazo",big(A.qtd),`${nf(A.pct,2)}% dos VELL em carteiras · ${usd(A.valor_usd,0)}`],
+    ["Carteiras com VELL recente",nf(A.carteiras)],
+    ["Preço médio de custo",A.custo==null?"—":usd(A.custo,5),"quanto pagaram em média"],
+    ["Preço atual contra o custo",pc(dif),dif==null?"":dif>=0?"em média estão no lucro":"em média estão no prejuízo"],
+    ["VELL de curto prazo em lucro",A.pct_lucro==null?"—":nf(A.pct_lucro,1)+"%","parte comprada abaixo do preço atual"],
+    ["Resultado em aberto",A.resultado_usd==null?"—":`<span class="${A.resultado_usd>=0?"up":"dn"}">${A.resultado_usd>=0?"+":"−"}US$ ${nf(Math.abs(A.resultado_usd),0)}</span>`,"ganho ou perda se vendessem agora"],
+    ["Resultado das vendas (7 dias)",A.sopr7==null?"—":`<span class="${A.sopr7>=1?"up":"dn"}">${nf(A.sopr7,2)}</span>`,A.sopr7==null?"sem vendas de curto prazo":A.sopr7>=1?"vendem com lucro":`vendem com prejuízo de ${nf((1-A.sopr7)*100,0)}%`],
+    ["VELL em mãos de longo prazo",big(A.longo),`${nf(100-A.pct,2)}% dos VELL em carteiras`]]);
+  const lab=Z.map(x=>dia(x.dia));
+  // estilo "linha fina + custo": preço de hora em hora e custo médio
+  const porDia={};Z.forEach(x=>porDia[x.dia]=x.custo);
+  const diaDe=ts=>{const d=new Date((ts+tz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
+  const HH=D.horas,cst=new Array(HH.length).fill(null);let pi=null;
+  // o custo é calculado no fim de cada dia: liga um dia ao outro com uma reta, para a linha ficar suave
+  HH.forEach((h,i)=>{const fim=i===HH.length-1||diaDe(HH[i+1][0])!==diaDe(h[0]),c=porDia[diaDe(h[0])];if(!fim||!c)return;
+    if(pi==null){for(let j=0;j<=i;j++)cst[j]=c}else{for(let j=pi+1;j<=i;j++)cst[j]=cst[pi]+(c-cst[pi])*(j-pi)/(i-pi)}pi=i});
+  const fino=(label,data,cor,extra={})=>Object.assign({label,data,borderColor:cor,backgroundColor:cor,pointRadius:0,borderWidth:1.2,tension:.35,spanGaps:true},extra);
+  chart("c-sth",{type:"line",data:{labels:hl(HH),datasets:[
+    fino("Custo médio dos holders de curto prazo",cst,"#ff4d5e",{borderWidth:2}),
+    fino("Preço do VELL",HH.map(h=>h[1]),"#e8eaee",{borderWidth:1,tension:0})]},
+    options:{plugins:{legend:{labels:{color:"#9aa0aa",boxWidth:18,boxHeight:1,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${usd(c.parsed.y,6)}`}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{color:"#6b7280",maxTicksLimit:8}},y:{position:"right",grid:{display:false},border:{display:false},ticks:{color:"#6b7280",callback:x=>nf(x,5)}}}}});
+  chart("c-sth-qtd",{type:"line",data:{labels:lab,datasets:[line("% em mãos de curto prazo",Z.map(x=>x.pct),"#f7b500",{fill:true,backgroundColor:"rgba(247,181,0,.14)"})]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${nf(c.parsed.y,2)}% (${big(Z[c.dataIndex].qtd)} VELL)`}}},scales:{y:{ticks:{callback:x=>nf(x,0)+"%"}}}}});
+  chart("c-sth-sopr",{data:{labels:lab,datasets:[{type:"bar",label:"Resultado das vendas",data:Z.map(x=>x.sopr==null?null:x.sopr-1),backgroundColor:Z.map(x=>x.sopr!=null&&x.sopr>=1?"#2ec4a6":"#ff4d4f")}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const x=Z[c.dataIndex];return x.sopr==null?"sem vendas":[`SOPR: ${nf(x.sopr,2)}`,`${big(x.vendido)} VELL vendidos`]}}}},scales:{y:{ticks:{callback:v=>nf(v+1,2)}}}}});
+}
+function ajudaLth(){const e=$("lth-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("lth-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+function rLth(){
+  const S=D.lth||{},nomes={"7d":"7 dias","30d":"30 dias"},ks=Object.keys(nomes).filter(k=>S[k]);
+  if(!ks.length){$("lth-kpis").innerHTML='<div class="mut">Sem dados suficientes para este indicador.</div>';return}
+  if(!nomes[lthK]||!S[lthK])lthK=ks[ks.length-1];
+  seg($("lth-seg"),ks.map(k=>[k,"mais de "+nomes[k]]),lthK,v=>{lthK=v;localStorage.setItem("vell_lth",v);rLth()},"Longo prazo = VELL parado há");
+  const A=S[lthK].agora,Z=S[lthK].serie,dif=A.mvrv==null?null:(A.mvrv-1)*100;
+  kpis("lth-kpis",[
+    ["VELL em mãos de longo prazo",big(A.qtd),`${nf(A.pct,2)}% dos VELL em carteiras · ${usd(A.valor_usd,0)}`],
+    ["Carteiras com VELL antigo",nf(A.carteiras)],
+    ["Variação em 7 dias",A.var7==null?"—":sg(A.var7,big)+" VELL",A.var7==null?"":A.var7>=0?"mais VELL virando longo prazo":"holders antigos saindo"],
+    ["Sem custo conhecido",big(A.sem_custo),"distribuídos antes do início das negociações"],
+    ["Preço médio de custo",A.custo==null?"—":usd(A.custo,5),`sobre ${big(A.qtd_custo)} VELL com custo conhecido`],
+    ["Preço atual contra o custo",pc(dif),dif==null?"":dif>=0?"em média estão no lucro":"em média estão no prejuízo"],
+    ["Resultado em aberto",A.resultado_usd==null?"—":`<span class="${A.resultado_usd>=0?"up":"dn"}">${A.resultado_usd>=0?"+":"−"}US$ ${nf(Math.abs(A.resultado_usd),0)}</span>`,"só dos lotes com custo conhecido"],
+    ["Vendas de longo prazo (7 dias)",usd(A.vendido7_usd,0),`${big(A.vendido7)} VELL vendidos no pool`],
+    ["Resultado das vendas (7 dias)",A.sopr7==null?"—":`<span class="${A.sopr7>=1?"up":"dn"}">${nf(A.sopr7,2)}</span>`,A.sopr7==null?"sem vendas com custo conhecido":A.sopr7>=1?"vendem com lucro":`vendem com prejuízo de ${nf((1-A.sopr7)*100,0)}%`]]);
+  const porDia={};Z.forEach(x=>porDia[x.dia]=x.custo);
+  const diaDe=ts=>{const d=new Date((ts+tz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
+  const HH=D.horas,cst=new Array(HH.length).fill(null);let pi=null;
+  HH.forEach((h,i)=>{const fim=i===HH.length-1||diaDe(HH[i+1][0])!==diaDe(h[0]),c=porDia[diaDe(h[0])];if(!fim||!c)return;
+    if(pi!=null){for(let j=pi+1;j<=i;j++)cst[j]=cst[pi]+(c-cst[pi])*(j-pi)/(i-pi)}else cst[i]=c;pi=i});
+  const fino=(label,data,cor,extra={})=>Object.assign({label,data,borderColor:cor,backgroundColor:cor,pointRadius:0,borderWidth:1.2,tension:.35,spanGaps:true},extra);
+  chart("c-lth",{type:"line",data:{labels:hl(HH),datasets:[
+    fino("Custo médio dos holders de longo prazo",cst,"#5b8cff",{borderWidth:2}),
+    fino("Preço do VELL",HH.map(h=>h[1]),"#e8eaee",{borderWidth:1,tension:0})]},
+    options:{plugins:{legend:{labels:{color:"#9aa0aa",boxWidth:18,boxHeight:1,font:{size:11}}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${usd(c.parsed.y,6)}`}}},
+      scales:{x:{grid:{display:false},border:{display:false},ticks:{color:"#6b7280",maxTicksLimit:8}},y:{position:"right",grid:{display:false},border:{display:false},ticks:{color:"#6b7280",callback:x=>nf(x,5)}}}}});
+  const lab=Z.map(x=>dia(x.dia));
+  chart("c-lth-qtd",{type:"line",data:{labels:lab,datasets:[line("% em mãos de longo prazo",Z.map(x=>x.pct),"#5b8cff",{fill:true,backgroundColor:"rgba(91,140,255,.14)"})]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${nf(c.parsed.y,2)}% (${big(Z[c.dataIndex].qtd)} VELL)`}}},scales:{y:{ticks:{callback:x=>nf(x,0)+"%"}}}}});
+  chart("c-lth-venda",{type:"bar",data:{labels:lab,datasets:[{label:"Vendas de longo prazo",data:Z.map(x=>x.vendido_usd),backgroundColor:Z.map(x=>x.sopr==null?"#6b7280":x.sopr>=1?"#2ec4a6":"#ff4d4f")}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{const x=Z[c.dataIndex];return [`${usd(x.vendido_usd,0)} (${big(x.vendido)} VELL)`,x.sopr==null?"sem custo conhecido":`SOPR: ${nf(x.sopr,2)}`]}}}}}});
+}
+function rFluxo(){
+  const F=D.fluxo,cut=D.gerado_em-RNG[fluxoPer]*3600;
+  seg($("fluxo-per"),PERIODOS.filter(x=>["24h","7d","30d","ano","tudo"].includes(x[0])),fluxoPer,x=>{fluxoPer=x;rFluxo()});
+  const T=F.todas.filter(t=>t[0]>=cut);
+  let vc=0,vv=0,nc=0,nv=0;const sc=new Set(),sv=new Set();
+  for(const t of T){if(t[1]){vc+=t[4];nc++;sc.add(t[6])}else{vv+=t[4];nv++;sv.add(t[6])}}
+  const tot=vc+vv,n=nc+nv,dif=vc-vv;
+  kpis("fluxo-kpis",[["Compras no período",usd(vc,0),`${nf(nc)} compras · ${nf(sc.size)} carteiras`],["Vendas no período",usd(vv,0),`${nf(nv)} vendas · ${nf(sv.size)} carteiras`],
+    ["Diferença (compras − vendas)",`<span class="${dif>=0?"up":"dn"}">${dif>=0?"+":"−"}US$ ${nf(Math.abs(dif),0)}</span>`,dif>=0?"compradores na frente":"vendedores na frente"],
+    ["Pressão compradora",tot?nf(vc/tot*100,0)+"%":"—","parte do volume que foi compra"],["Volume total",usd(tot,0),`${nf(n)} negócios`],["Valor médio por negócio",usd(n?tot/n:0,0)],
+    ["Taxa na compra",F.taxa_compra==null?"—":nf(F.taxa_compra*100,1)+"%"],["Taxa na venda",F.taxa_venda==null?"—":nf(F.taxa_venda*100,1)+"%"]]);
+  seg($("fluxo-seg"),[["todas","Todas"],["compra","Só compras"],["venda","Só vendas"],["grandes","Só grandes (US$ 500+)"]],fluxoF,x=>{fluxoF=x;rFluxo()},"Mostrar");
+  const obj=t=>({ts:t[0],lado:t[1]?"compra":"venda",tok:t[2],bnb:t[3],usd:t[4],preco:t[5],quem:t[6],tx:t[7],taxa:t[8],rotulo:F.rotulos[t[6]]||"",saldo:F.saldos[t[6]]||0});
+  const tc=[{t:"Quando",f:r=>dtm(r.ts),s:r=>r.ts},{t:"Tipo",f:r=>`<span class="${r.lado==='compra'?'up':'dn'}">${r.lado}</span>`},{t:"Valor",n:1,f:r=>usd(r.usd,2),s:r=>r.usd},{t:"VELL",n:1,f:r=>big(r.tok),s:r=>r.tok},{t:"BNB",n:1,f:r=>nf(r.bnb,4),s:r=>r.bnb},{t:"Preço",n:1,f:r=>usd(r.preco,6),s:r=>r.preco},{t:"Carteira",f:r=>addr(r.quem,r.rotulo)},{t:"Saldo atual da carteira",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"Taxa",n:1,f:r=>r.taxa==null?"—":nf(r.taxa*100,1)+"%"},{t:"Transação",f:r=>txl(r.tx)}];
+  const fil=T.filter(t=>fluxoF==="todas"||(fluxoF==="grandes"?t[4]>=500:(t[1]?"compra":"venda")===fluxoF)),MAX=500;
+  $("fluxo-nota").textContent=fil.length>MAX?`Mostrando as ${MAX} negociações mais recentes de ${nf(fil.length)} no período. Os totais acima contam todas.`:`${nf(fil.length)} negociações no período.`;
+  table("tb-trades",tc,fil.slice(-MAX).reverse().map(obj));
+  table("tb-grandes",tc,T.slice().sort((a,b)=>b[4]-a[4]).slice(0,60).map(obj));
+  const t=F.taxa_serie;
+  chart("c-taxa",{type:"line",data:{labels:t.map(x=>dia(x.dia)),datasets:[line("Taxa na compra (%)",t.map(x=>x.compra==null?null:x.compra*100),"#2ec4a6"),line("Taxa na venda (%)",t.map(x=>x.venda==null?null:x.venda*100),"#ff4d4f")]}});
+}
+function rLiqBnb(){
+  // BNB guardado no pool a cada hora = metade da liquidez em dólar / preço do BNB
+  const lb=x=>x[4]/x[3]/2,all=D.horas,src=all.map((x,i)=>{const c=lb(x),o=i?lb(all[i-1]):c;return [x[0],o,Math.max(o,c),Math.min(o,c),c]});
+  const h=hrs(range.liqb),v=h.map(lb),ini=v[0],fim=v[v.length-1],mx=Math.max(...v),mn=Math.min(...v),f=x=>nf(x,2)+" BNB";
+  kpis("liqb-kpis",[["BNB no pool agora",f(fim),"só o BNB, sem contar os VELL"],["Variação no período",pc((fim/ini-1)*100,2),`${fim>=ini?"+":"−"}${nf(Math.abs(fim-ini),2)} BNB`],["Máxima no período",f(mx)],["Mínima no período",f(mn)],["Valor desse BNB em dólar",usd(h[h.length-1][4]/2,0),`BNB a ${usd(h[h.length-1][3],2)}`]]);
+  seg($("liqb-modo"),[["bnb","Só BNB"],["vs","BNB x preço do VELL"]],liqModo,x=>{liqModo=x;localStorage.setItem("vell_liqmodo",x);render()},"Mostrar");
+  $("liqb-tipo").style.display=liqModo==="vs"?"none":"";   // tipo de gráfico só vale no modo "Só BNB"
+  if(liqModo==="vs"){
+    // duas escalas: BNB à esquerda (amarelo) e preço do VELL à direita (vermelho)
+    const pv=h.map(x=>x[1]);
+    $("liqb-kpis").insertAdjacentHTML("beforeend",`<div class="kpi"><div class="l">Preço do VELL no período</div><div class="v">${pc((pv[pv.length-1]/pv[0]-1)*100,2)}</div><div class="s">${usd(pv[0],5)} → ${usd(pv[pv.length-1],5)}</div></div>`);
+    chart("c-liqb",{type:"line",data:{labels:hl(h),datasets:[line("BNB no pool (escala da esquerda)",v,"#f7b500",{yAxisID:"y",borderWidth:2.4}),line("Preço do VELL em US$ (escala da direita)",pv,"#ff4d4f",{yAxisID:"y2",borderWidth:2.4})]},
+      options:{plugins:{tooltip:{callbacks:{label:c=>c.datasetIndex===0?`BNB no pool: ${f(c.parsed.y)}`:`Preço do VELL: ${usd(c.parsed.y,6)}`}}},
+        scales:{y:{position:"left",ticks:{color:"#f7b500",callback:x=>nf(x,0)},title:{display:true,text:"BNB no pool",color:"#f7b500"}},
+                y2:{position:"right",grid:{drawOnChartArea:false},ticks:{color:"#ff4d4f",callback:x=>nf(x,5)},title:{display:true,text:"Preço do VELL (US$)",color:"#ff4d4f"}}}}});
+  }else precoChart("c-liqb",range.liqb,{S:{velas:src,linha:lb,cor:"#f7b500",nome:"BNB no pool",fmt:f,tick:x=>nf(x,0)}});
+}
+function rLiquidez(){
+  const L=D.liquidez,r=D.resumo;
+  rLiqBnb();
+  kpis("liq-kpis",[["Liquidez total",usd(r.liquidez_usd,0)],["VELL no pool",big(r.reserva_tok)],["BNB no pool",nf(r.reserva_bnb,2)],["Liquidez travada",nf(L.lp_travado_pct,1)+"%","queimada ou em cofre"],["Liquidez / valor de mercado",nf(r.liq_sobre_mcap,1)+"%"]]);
+  table("tb-imp",[{t:"Tamanho da ordem",f:r=>usd(r.usd,0)},{t:"Ao comprar, paga a mais",n:1,f:r=>pc(r.compra,2)},{t:"Ao vender, recebe a menos",n:1,f:r=>pc(r.venda,2)}],L.impacto);
+  table("tb-lp",[{t:"Quem",f:r=>addr(r.end,r.rotulo||(r.tipo==="contrato"?"contrato":""))},{t:"Cotas",n:1,f:r=>nf(r.lp,2)},{t:"% do pool",n:1,f:r=>nf(r.pct,2)+"%"}],L.lp_holders);
+  table("tb-liqev",[{t:"Quando",f:r=>dtm(r.ts)},{t:"Tipo",f:r=>r.tipo==="entrada"?'<span class="up">entrada</span>':'<span class="dn">saída</span>'},{t:"Valor",n:1,f:r=>usd(r.usd,0)},{t:"VELL",n:1,f:r=>big(r.tok)},{t:"BNB",n:1,f:r=>nf(r.bnb,3)},{t:"Quem",f:r=>addr(r.quem)},{t:"Transação",f:r=>txl(r.tx)}],L.eventos);
+  $("contrato").innerHTML=`<table><tbody>
+   <tr><td>Token</td><td><a href="https://bscscan.com/token/${D.token}" target="_blank">${D.token}</a></td></tr>
+   <tr><td>Par (pool)</td><td><a href="https://bscscan.com/address/${D.par}" target="_blank">${D.par}</a></td></tr>
+   <tr><td>Dono do contrato</td><td>${L.dono_renunciou?"Renunciado (ninguém controla)":addr(L.dono)} ${L.dono_renunciou?"":`— saldo: ${big(L.dono_saldo)} VELL (${nf(L.dono_saldo/r.supply*100,2)}%)`}</td></tr>
+   <tr><td>Criador do contrato</td><td>${addr(L.criador)}</td></tr>
+   <tr><td>Fornecimento total</td><td>${nf(r.supply)} VELL · queimado: ${big(r.queimado)}</td></tr>
+   <tr><td>Trocas de dono</td><td>${L.trocas_dono.map(x=>`${dtm(x.ts)}: ${addr(x.de)} → ${addr(x.para)}`).join("<br>")||"—"}</td></tr>
+   <tr><td>Início das negociações</td><td>${dtm(D.lancamento)}</td></tr></tbody></table>`;
+}
+function ajudaBnb(){const e=$("bnb-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("bnb-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+function ajudaBnbTexto(){
+  const R0=(D.rel&&D.rel[relRef])||D.bnb,x=R0["7d"]||R0["30d"]||R0["tudo"];if(!x)return "";
+  const rf=relRef,nota=rf!=="BNB"?`<p><b>Sobre o ${rf}:</b> o VELL não é negociado contra ${rf}. Aqui o ${rf} serve como referência de mercado: a coluna "VELL em ${rf}" mostra quanto o VELL ganhou ou perdeu em relação a ele.</p>`:"";
+  const p=v=>v==null?"—":(v>0?"+":"")+nf(v,1)+"%";
+  return `<h4>Por que o BNB entra na conta</h4>
+  <p>No pool, ninguém troca VELL por dólar: troca-se VELL por BNB. O preço em dólar é uma conta: quantos BNB vale um VELL, vezes quantos dólares vale um BNB. Então o VELL pode cair em dólar por dois motivos:</p>
+  <ul><li><b>O BNB caiu:</b> o VELL vale os mesmos BNB, mas cada BNB vale menos dólares.</li>
+  <li><b>O VELL caiu em relação ao BNB:</b> venderam VELL no pool e cada VELL passou a valer menos BNB. Esse é o movimento próprio do VELL.</li></ul>
+  ${nota}<h4>As colunas, com os últimos 7 dias de exemplo</h4>
+  <table><thead><tr><th>Coluna</th><th>Agora</th><th>O que significa</th></tr></thead><tbody>
+  <tr><td>VELL em dólar</td><td>${p(x.vell_usd)}</td><td>O resultado final: quanto o VELL variou em dólar.</td></tr>
+  <tr><td>${rf} em dólar</td><td>${p(x.bnb_usd)}</td><td>Quanto o ${rf} variou no mesmo período.</td></tr>
+  <tr><td>VELL em ${rf}</td><td>${p(x.vell_bnb)}</td><td>Quanto o VELL variou além do ${rf}. É a parte que só o VELL explica.</td></tr>
+  <tr><td>Correlação (hora a hora)</td><td>${nf(x.corr,2)}</td><td>Se os dois se movem na mesma direção de uma hora para a outra.</td></tr>
+  <tr><td>Correlação (a cada 4 horas)</td><td>${nf(x.corr4h,2)}</td><td>A mesma medida em blocos de 4 horas. Sofre menos com horas sem negociação, mas em períodos curtos usa poucos pontos e fica pouco confiável.</td></tr>
+  <tr><td>Sensibilidade ao ${rf}</td><td>${x.beta==null?"—":nf(x.beta,2)+"x"}</td><td>Quando o ${rf} mexe 1%, quanto o VELL costuma mexer.</td></tr></tbody></table>
+  <p>As duas partes (BNB e VELL em BNB) não somam exatamente o total, porque uma variação se aplica sobre a outra, e não sobre o valor inicial.</p>
+  <h4>Como ler a correlação</h4>
+  <ul><li><b>Perto de 1:</b> os dois sobem e descem juntos.</li><li><b>Perto de 0:</b> um não tem relação com o outro.</li><li><b>Negativa:</b> quando um sobe, o outro cai.</li></ul>
+  <h4>Como ler a sensibilidade</h4>
+  <ul><li><b>1,00x:</b> o VELL acompanha o BNB na mesma proporção.</li><li><b>Acima de 1:</b> o VELL exagera os movimentos do BNB.</li><li><b>Abaixo de 1:</b> o VELL se mexe menos que o BNB.</li></ul>
+  <h4>Como usar</h4>
+  <p>Compare as colunas "BNB em dólar" e "VELL em BNB" em cada linha. Se a maior parte da variação está no BNB, o VELL só acompanhou o mercado. Se está no "VELL em BNB", o movimento veio de compras ou vendas do próprio VELL.</p>`}
+let difOrd=(()=>{try{return localStorage.getItem("vell_diford")||"natural"}catch(e){return "natural"}})();
+function rBnb(){
+  $("bnb-ajuda").innerHTML=ajudaBnbTexto();
+  if(!(D.rel&&D.rel[relRef]))relRef="BNB";
+  const B=(D.rel&&D.rel[relRef])||D.bnb,rf=relRef,names={"24h":"Últimas 24 horas","7d":"Últimos 7 dias","30d":"Últimos 30 dias","tudo":"Desde o lançamento"};
+  $("rel-nome").textContent=rf;
+  seg($("rel-seg"),Object.keys(D.rel||{BNB:1}).map(k=>[k,k]),rf,v=>{relRef=v;localStorage.setItem("vell_relref",v);rBnb()},"Comparar o VELL com");
+  table("tb-bnb",[{t:"Período",f:r=>names[r.k]},{t:"VELL em dólar",n:1,f:r=>pc(r.vell_usd)},{t:rf+" em dólar",n:1,f:r=>pc(r.bnb_usd)},{t:"VELL em "+rf+(rf==="BNB"?" (movimento próprio)":""),n:1,f:r=>pc(r.vell_bnb)},{t:"Correlação (hora a hora)",n:1,f:r=>nf(r.corr,2)},{t:"Correlação (a cada 4 horas)",n:1,f:r=>nf(r.corr4h,2)},{t:"Sensibilidade ao "+rf,n:1,f:r=>r.beta==null?"—":nf(r.beta,2)+"x"}],Object.keys(names).filter(k=>B[k]).map(k=>Object.assign({k},B[k])));
+  const TOK=[["BTC","#2f7bff"],["BNB","#e6c200"],["ETH","#ff9f1a"],["SOL","#b57bff"],["XRP","#a3a3a3"],["HYPE","#50d2c1"],["TRX","#c98a5a"],["ZEC","#e377c2"],["CMC20","#e8eaee"]].filter(t=>D.tokens[t[0]]);
+  sel=sel.filter(x=>TOK.some(t=>t[0]===x));
+  const aberto=!!document.querySelector("#tok-seg details[open]");
+  $("tok-seg").innerHTML=`<details class="multi"${aberto?" open":""}><summary><span>VELL versus</span><b>${sel.length===TOK.length?"Todos":sel.length?sel.join(", "):"nenhum"}</b></summary><div><label style="border-bottom:1px solid var(--line);border-radius:6px 6px 0 0;padding-bottom:8px;margin-bottom:2px"><input type="checkbox" value="__todos"${sel.length===TOK.length?" checked":""}> <b>Todos</b></label>${TOK.map(t=>`<label><input type="checkbox" value="${t[0]}"${sel.includes(t[0])?" checked":""}> <span style="color:${t[1]}">●</span> ${t[0]}</label>`).join("")}</div></details>`;
+  $("tok-seg").querySelectorAll("input").forEach(bt=>bt.onchange=()=>{const v=bt.value;sel=v==="__todos"?(bt.checked?TOK.map(t=>t[0]):[]):bt.checked?sel.concat(v):sel.filter(x=>x!==v);localStorage.setItem("vell_sel",JSON.stringify(sel));rBnb()});
+  const h=hrs(range.bnb),ini=h.mensal||h.idx[0]===0,lab=hl(h);
+  if(ini)lab.unshift(h.mensal?"lançamento":dtm(D.lancamento));   // desde o lançamento: começa no preço de lançamento do VELL
+  const ser=sym=>{const v=sym==="VELL"?h.map(x=>x[1]):h.idx.map(i=>D.tokens[sym][i]);if(ini)v.unshift(sym==="VELL"?D.velas[0][1]:D.tokens[sym][0]);return v};
+  const ix=v=>{const b=v.find(x=>x!=null);return v.map(x=>x==null?null:(x/b-1)*100)};
+  const mm=v=>{const w=v.filter(x=>x!=null),lo=Math.min(...w),hi=Math.max(...w);return v.map(x=>x==null?null:hi>lo?(x-lo)/(hi-lo)*100:50)};
+  const act=TOK.filter(t=>sel.includes(t[0])),dash=t=>t[0]==="CMC20"?{borderDash:[5,3]}:{};
+  chart("c-bnb",{type:"line",data:{labels:lab,datasets:[line("VELL (%)",ix(ser("VELL")),"#ff4d4f",{borderWidth:2.8})].concat(act.map(t=>line(t[0]+" (%)",ix(ser(t[0])),t[1],dash(t))))},options:{scales:{y:{ticks:{callback:v=>nf(v,0)+"%"}}},plugins:{tooltip:{callbacks:{label:c=>`${c.dataset.label.replace(" (%)","")}: ${c.parsed.y>0?"+":""}${nf(c.parsed.y,1)}%`}}}}});
+  const last=v=>{const w=v.filter(x=>x!=null);return w.length?w[w.length-1]:null},pv=last(ix(ser("VELL")));
+  const ORD=["BTC","BNB","ETH","SOL","XRP","HYPE","TRX","ZEC","CMC20"],oi=a=>{const i=ORD.indexOf(a);return i<0?99:i};
+  let rows=act.map(t=>({a:t[0],v:last(ix(ser(t[0]))),cor:t[1]})).sort((x,y)=>oi(x.a)-oi(y.a));
+  if(difOrd!=="natural")rows.sort((x,y)=>(x.v==null)-(y.v==null)||(difOrd==="maior"?y.v-x.v:x.v-y.v));
+  rows=[{a:"VELL",v:pv,cor:"#ff4d4f"}].concat(rows);
+  seg($("dif-ord"),[["natural","Ordem natural (BTC → ZEC + CMC20)"],["maior","Maior valorização primeiro"],["menor","Menor valorização primeiro"]],difOrd,v=>{difOrd=v;$("tb-dif")._sort=null;try{localStorage.setItem("vell_diford",v)}catch(e){};rBnb()},"Ordem");
+  table("tb-dif",[{t:"Ativo",f:r=>`<span style="color:${r.cor}">●</span> ${r.a}`},{t:"Variação no período",n:1,f:r=>pc(r.v),s:r=>r.v},{t:"Diferença (VELL − ativo)",n:1,f:r=>r.a==="VELL"?"—":sg(pv-r.v,x=>nf(x,1)+" p.p."),s:r=>pv-r.v},{t:"VELL medido no ativo",n:1,f:r=>r.a==="VELL"?"—":pc(((1+pv/100)/(1+r.v/100)-1)*100),s:r=>(1+pv/100)/(1+r.v/100)},{t:"Quem foi melhor",f:r=>r.a==="VELL"?"—":pv>r.v?'<span class="up">VELL</span>':`<span class="dn">${r.a}</span>`}],rows);
+  chart("c-sobre",{type:"line",data:{labels:lab,datasets:[line("VELL",mm(ser("VELL")),"#ff4d4f",{borderWidth:2.8})].concat(act.filter(t=>t[0]!=="USDT").map(t=>line(t[0],mm(ser(t[0])),t[1],dash(t))))},options:{scales:{y:{ticks:{callback:v=>v===0?"mínima":v===100?"máxima":""}}},plugins:{tooltip:{enabled:false}}}});
+}
+function irPara(i){
+  const g=(D.sinais[i]||{}).ir;if(!g)return;const c=g.cfg||{};
+  if(c.fluxoPer)fluxoPer=c.fluxoPer;if(c.leiPz)leiPz=c.leiPz;if(c.movWin)movWin=c.movWin;
+  if(c.sthK)sthK=c.sthK;if(c.lthK)lthK=c.lthK;if(c.relRef)relRef=c.relRef;
+  tab=g.aba;try{localStorage.setItem("vell_tab",tab)}catch(e){}
+  render();
+  setTimeout(()=>{
+    let el=$(g.alvo);if(!el)return;
+    const box=el.tagName==="CANVAS"?el.closest(".card")||el:el;
+    let h=null,n=box;
+    while(n&&n.tagName!=="SECTION"&&!h){let p=n.previousElementSibling;while(p&&!h){if(p.tagName==="H2")h=p;p=p.previousElementSibling}n=n.parentElement}
+    const alvo=h||box,top=alvo.getBoundingClientRect().top+window.scrollY-(document.querySelector("header").offsetHeight+12);
+    window.scrollTo(0,top);
+    box.classList.remove("flash");void box.offsetWidth;box.classList.add("flash");
+  },30);
+}
+const R={geral:rGeral,leitura:rLeitura,volume:rVolume,carteiras:rCarteiras,fluxo:rFluxo,liquidez:rLiquidez,bnb:rBnb};
+function render(){
+  if(!D||D.vazio)return;
+  $("wait").style.display="none";$("main").style.display="";$("logo").style.display="";$("ref-btn").style.display=D.indicacao&&D.indicacao.codigo?"":"none";
+  const I=D.indicacao;
+  $("ref-lado").innerHTML=I&&I.codigo?`<b>Ainda não tem a carteira Vellora?</b><span class="mut">Baixe o aplicativo e use o código de indicação no cadastro.</span><span class="codigo">${I.codigo}</span><button class="sec ref-cp" onclick="refCopiar()">Copiar</button><button class="refbtn" onclick="refAbrir()">Baixar carteira</button>`:"";
+  $("nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join("");
+  $("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;localStorage.setItem("vell_tab",tab);render()});
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="t-"+tab));
+  document.querySelectorAll(".seg[data-range]").forEach(el=>{const k=el.dataset.range;seg(el,PERIODOS,range[k],v=>{range[k]=v;render()})});
+  document.querySelectorAll(".seg[data-tipo]").forEach(el=>{
+    el.innerHTML=selHtml("Tipo de gráfico",[["linha","Linha"],["area","Área"],["candles","Candles"]],tipo,"tipo")
+      +(tipo==="candles"?selHtml("Cada candle",[["auto","Automático"],["1","1 hora"],["4","4 horas"],["24","1 dia"]],vela,"vela"):"");
+    el.querySelectorAll("select").forEach(x=>x.onchange=()=>{if(x.dataset.k==="tipo"){tipo=x.value;localStorage.setItem("vell_tipo",tipo)}else{vela=x.value;localStorage.setItem("vell_vela",vela)}render()})});
+  $("hdr").innerHTML=`${usd(D.resumo.preco,6)} &nbsp; ${pc(D.resumo.var_24h)} em 24h`;
+  try{R[tab]()}catch(e){console.error(e);$("status").textContent="Erro ao desenhar: "+e.message}
+}
+async function tick(){
+  try{
+    const s=await (await fetch("/api/status")).json();
+    const lab={ok:"Atualizado",coletando:"Buscando dados novos…",calculando:"Calculando…",erro:"Falha na última atualização (tentando de novo)",iniciando:"Iniciando…"}[s.status]||s.status;
+    $("status").innerHTML=`${lab}${s.ok_em?` · dados de ${dtm(s.ok_em)}`:""}<br>atualiza a cada ${Math.round(s.intervalo/60)} min${s.erro?` · ${s.erro.slice(0,90)}`:""}`;
+    $("waitd").textContent=s.detalhe||"";
+    if(!D||D.vazio||s.ok_em>(D._ok||0)){const d=await (await fetch("/api/dados")).json();if(!d.vazio){d._ok=s.ok_em;D=d;render()}}
+  }catch(e){$("status").textContent="Sem conexão com o programa. Ele está aberto?"}
+}
+tick();setInterval(tick,15000);
+</script>
+</body>
+</html>
