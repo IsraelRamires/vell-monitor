@@ -176,6 +176,7 @@ def build():
     new_holders_daily = defaultdict(int)
     seen_holder = set()
     burned = 0.0
+    cart_ev = defaultdict(list)   # histórico de cada carteira (consulta de lucro/prejuízo por período)
     burns = []               # (quando, quem queimou, VELL, transação, preço US$ no momento)
     dist_hubs = {a for a in (owner, deployer) if a}
     # --- Short-Term Holders: cada carteira guarda "lotes" [quando recebeu, quantidade, preço de custo]
@@ -334,6 +335,13 @@ def build():
                 w["first"] = ts
             w["last"] = ts
             is_trader = trade is not None and trade["who"] == a
+            # histórico da carteira para a consulta por período: [quando, VELL (+/-), 1=compra 2=venda 0=transferência, US$]
+            if is_trader and trade["lado"] == "compra" and d > 0:
+                cart_ev[a].append([ts, round(d, 6), 1, round(trade["usd"], 4)])
+            elif is_trader and trade["lado"] == "venda" and d < 0:
+                cart_ev[a].append([ts, round(d, 6), 2, round(trade["usd"], 4)])
+            else:
+                cart_ev[a].append([ts, round(d, 6), 0, round(abs(d) * (cur_px or 0), 4)])
             if a not in dist_hubs:
                 if d > 0:
                     custo_ = trade["usd"] / d if (is_trader and trade["lado"] == "compra") else cur_px
@@ -1310,6 +1318,12 @@ def build():
         "tokens": tokens,
         "tempo_calculo": round(time.time() - t_start, 2),
     }
+    # histórico por carteira, dividido em arquivos pelos 2 primeiros caracteres do endereço (api/cart/xx)
+    shards = defaultdict(dict)
+    for a_, ev_ in cart_ev.items():
+        if a_ in carteiras_idx:
+            shards[a_[2:4]][a_] = ev_
+    out["_cart_ev"] = dict(shards)
     out["_carteiras"] = {"gerado_em": now, "preco": price, "campos": CAMPOS_CART, "c": carteiras_idx}
     out["_enderecos_top"] =[a for a, _ in holders[:150]] + [x["end"] for x in insiders[:60]]
     return out

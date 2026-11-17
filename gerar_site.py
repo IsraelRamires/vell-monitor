@@ -9,6 +9,7 @@ blockchain, calcula as métricas e grava o resultado. Em vez de servir pela port
     <saida>/api/dados         as métricas (o mesmo JSON de /api/dados)
     <saida>/api/status        quando foi a última atualização
     <saida>/api/carteiras     todas as carteiras (consulta de lucro/prejuízo)
+    <saida>/api/cart/xx       histórico das carteiras que começam com 0xXX (consulta por período)
 
 Uso:  python gerar_site.py _site
 """
@@ -48,6 +49,11 @@ def main(saida):
         data, _ = calcular()
 
     cart = data.pop("_carteiras", {"c": {}})
+    ev = data.pop("_cart_ev", {})
+    os.makedirs(os.path.join(saida, "api", "cart"), exist_ok=True)
+    for k in (f"{i:02x}" for i in range(256)):          # um arquivo por prefixo (00..ff), mesmo vazio
+        with open(os.path.join(saida, "api", "cart", k), "wb") as f:
+            f.write(json.dumps(ev.get(k, {}), separators=(",", ":")).encode("utf-8"))
     with open(os.path.join(saida, "api", "dados"), "wb") as f:
         f.write(dump(data))
     with open(os.path.join(saida, "api", "carteiras"), "wb") as f:

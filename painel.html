@@ -228,13 +228,15 @@ header #status{margin-left:0}
     <li><b>Resultado em aberto:</b> quanto o saldo atual vale hoje menos quanto ele custou. Só vira lucro ou prejuízo de verdade se vender.</li>
     <li><b>Resultado das vendas:</b> o que recebeu em cada venda menos o custo dos VELL vendidos. Os VELL mais antigos da carteira saem primeiro.</li>
     <li><b>Preço para empatar:</b> o custo médio dos VELL que a carteira tem hoje.</li>
-    <li><b>Conta simples:</b> só o dinheiro que passou pelo pool: o que recebeu nas vendas, mais o valor atual do saldo, menos o que pagou nas compras. Ignora transferências.</li></ul>
+    <li><b>Saldo total de lucro ou prejuízo no período:</b> vendas + valor do saldo atual − compras − valor do saldo no início do período (pelo preço daquele momento). VELL recebido por transferência no período é descontado pelo preço da hora em que chegou, e VELL enviado é somado, para que presentes e envios entre carteiras não pareçam lucro ou prejuízo.</li>
+    <li><b>Desde o lançamento:</b> o saldo inicial é zero. VELL recebido antes do início das negociações não tem preço e entra como ganho.</li></ul>
     <p>É uma estimativa feita com os dados públicos da blockchain. Não inclui taxa de gás, e transferências entre carteiras da mesma pessoa podem distorcer o custo.</p>
   </div>
   <div class="card cc-busca">
     <input id="cc-end" type="text" placeholder="Cole o endereço da carteira (0x…)" spellcheck="false" autocomplete="off" onkeydown="if(event.key==='Enter')consultarCarteira()">
     <button class="refbtn" onclick="consultarCarteira()">Consultar</button>
   </div>
+  <div class="seg" id="cc-per"></div>
   <div id="cc-res"></div>
 </section>
 
@@ -793,7 +795,7 @@ function irPara(i){
   },30);
 }
 function ajudaCc(){const e=$("cc-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("cc-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
-let CART=null;
+let CART=null,CEV={_em:0},ccPer=(()=>{try{return localStorage.getItem("vell_ccper")||"tudo"}catch(e){return "tudo"}})();
 async function consultarCarteira(){
   const a=($("cc-end").value||"").trim().toLowerCase(),out=$("cc-res");
   if(!/^0x[0-9a-f]{40}$/.test(a)){out.innerHTML='<div class="card mut">Endereço inválido. Ele começa com 0x e tem 42 caracteres.</div>';return}
@@ -802,6 +804,12 @@ async function consultarCarteira(){
     out.innerHTML='<div class="card mut">Carregando as carteiras…</div>';
     try{CART=await fetch("api/carteiras?t="+Date.now()).then(r=>r.json())}catch(e){out.innerHTML='<div class="card mut">Não foi possível carregar os dados das carteiras. Tente de novo em instantes.</div>';return}
   }
+  const pf=a.slice(2,4);
+  if(!(pf in CEV)||CEV._em<D.gerado_em){
+    if(CEV._em<D.gerado_em)CEV={_em:D.gerado_em};
+    try{CEV[pf]=await fetch("api/cart/"+pf+"?t="+Date.now()).then(r=>r.json())}catch(e){CEV[pf]={}}
+  }
+  seg($("cc-per"),[["24h","24 horas"],["7d","7 dias"],["30d","30 dias"],["365d","365 dias"],["tudo","Desde o lançamento"]],ccPer,v=>{ccPer=v;try{localStorage.setItem("vell_ccper",v)}catch(e){};mostrarCarteira(a)},"Período");
   mostrarCarteira(a);
 }
 function mostrarCarteira(a){
@@ -823,19 +831,32 @@ function mostrarCarteira(a){
     ["Preço para empatar",empate?usd(empate,6):"—",empate?`preço agora: ${usd(px,6)} (${pc((px/empate-1)*100,1)})`:""],
     ["Resultado das vendas",w.custo_vendido>0?res(real):"—",realPct!=null?`${pc(realPct,1)} sobre o custo do que vendeu`:w.n_vendas?"só vendeu VELL sem custo":"não vendeu"],
     ["VELL sem custo",w.qtd_sem_custo>DUSTJ?big(w.qtd_sem_custo)+" VELL":"—",w.qtd_sem_custo>DUSTJ?`recebidos antes das negociações · valem ${usd(w.qtd_sem_custo*px,0)}`:"nenhum"],
-    ["Conta simples",res(simples),`vendas ${usd(w.vendeu_usd,0)} + saldo ${usd(valor,0)} − compras ${usd(w.comprou_usd,0)}`],
   ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join("")}</div>`;
-  h+=`<div class="card" style="margin-top:10px"><table><tbody>
-    <tr><td>Compras no pool</td><td class="n">${nf(w.n_compras)} compras · ${big(w.comprou)} VELL · ${usd(w.comprou_usd,0)}</td></tr>
-    <tr><td>Vendas no pool</td><td class="n">${nf(w.n_vendas)} vendas · ${big(w.vendeu)} VELL · ${usd(w.vendeu_usd,0)}</td></tr>
-    <tr><td>Recebeu por transferência</td><td class="n">${big(w.recebeu)} VELL</td></tr>
-    <tr><td>Enviou por transferência</td><td class="n">${big(w.enviou)} VELL</td></tr>
-    ${w.venda_sem_custo>0?`<tr><td>Vendas de VELL sem custo</td><td class="n">${usd(w.venda_sem_custo,0)} (fora do resultado das vendas)</td></tr>`:""}
+  // ---- resultado no período escolhido (a partir do histórico da carteira)
+  const PER=[["24h","24 horas",86400],["7d","7 dias",7*86400],["30d","30 dias",30*86400],["365d","365 dias",365*86400],["tudo","Desde o lançamento",0]];
+  const pz=PER.find(x=>x[0]===ccPer)||PER[4],ini=pz[2]?D.gerado_em-pz[2]:0,ev=(CEV[a.slice(2,4)]||{})[a]||[];
+  const E=ev.filter(e=>e[0]>=ini),soma=(f,k)=>E.filter(f).reduce((s,e)=>s+(k==="t"?Math.abs(e[1]):e[3]),0);
+  let saldoIni=w.saldo-E.reduce((s,e)=>s+e[1],0);if(Math.abs(saldoIni)<1e-3||!pz[2])saldoIni=pz[2]?Math.max(saldoIni,0):0;
+  const hIni=pz[2]?D.horas.filter(x=>x[0]<=ini).pop():null,pxIni=hIni?hIni[1]:0,valorIni=saldoIni*pxIni;
+  const cT=soma(e=>e[2]===1,"t"),cU=soma(e=>e[2]===1,"u"),cN=E.filter(e=>e[2]===1).length;
+  const vT=soma(e=>e[2]===2,"t"),vU=soma(e=>e[2]===2,"u"),vN=E.filter(e=>e[2]===2).length;
+  const rT=soma(e=>e[2]===0&&e[1]>0,"t"),rU=soma(e=>e[2]===0&&e[1]>0,"u"),eT=soma(e=>e[2]===0&&e[1]<0,"t"),eU=soma(e=>e[2]===0&&e[1]<0,"u");
+  const resP=vU+valor-cU-valorIni-rU+eU,baseP=valorIni+cU+rU,pctP=baseP>0?resP/baseP*100:null;
+  const nomeP=pz[0]==="24h"?"nas últimas 24 horas":pz[2]?`nos últimos ${pz[1]}`:"desde o lançamento";
+  const formula=[`vendas ${usd(vU,0)}`,`+ saldo atual ${usd(valor,0)}`,`− compras ${usd(cU,0)}`].concat(pz[2]?[`− saldo no início ${usd(valorIni,0)}`]:[]).concat(rU>=0.5?[`− recebidos por transferência ${usd(rU,0)}`]:[]).concat(eU>=0.5?[`+ enviados por transferência ${usd(eU,0)}`]:[]).join(" ");
+  h=h.replace('<div class="grid" id="cc-kpis">',`<div class="card cc-per-box"><div class="l mut">Saldo total de lucro ou prejuízo ${nomeP}</div><div style="font-size:22px;font-weight:600;margin:2px 0">${res(resP)}${pctP!=null?` <span style="font-size:15px">(${pc(pctP,1)})</span>`:""}</div><div class="mut" style="font-size:12px">${formula}</div></div><h2 style="font-size:15px">Situação atual dos VELL da carteira</h2><div class="grid" id="cc-kpis">`);
+  h+=`<h2 style="font-size:15px">Movimentação ${nomeP}</h2><div class="card"><table><tbody>
+    ${pz[2]?`<tr><td>Saldo no início do período</td><td class="n">${big(saldoIni)} VELL · valia ${usd(valorIni,valorIni<100?2:0)}${pxIni?` (preço ${usd(pxIni,6)} em ${dtm(ini)})`:""}</td></tr>`:""}
+    <tr><td>Saldo agora</td><td class="n">${big(w.saldo)} VELL · vale ${usd(valor,valor<100?2:0)}</td></tr>
+    <tr><td>Compras no pool</td><td class="n">${nf(cN)} compras · ${big(cT)} VELL · ${usd(cU,cU<100?2:0)}</td></tr>
+    <tr><td>Vendas no pool</td><td class="n">${nf(vN)} vendas · ${big(vT)} VELL · ${usd(vU,vU<100?2:0)}</td></tr>
+    <tr><td>Recebeu por transferência</td><td class="n">${big(rT)} VELL${rT>0?` · ${usd(rU,rU<100?2:0)} no preço da hora`:""}</td></tr>
+    <tr><td>Enviou por transferência</td><td class="n">${big(eT)} VELL${eT>0?` · ${usd(eU,eU<100?2:0)} no preço da hora`:""}</td></tr>
     <tr><td>Primeira movimentação</td><td class="n">${dtm(w.primeira)}</td></tr>
     <tr><td>Última movimentação</td><td class="n">${dtm(w.ultima)} (${ago(w.ultima)} atrás)</td></tr>
-    <tr style="border-top:2px solid var(--line)"><td><b>Saldo total de lucro ou prejuízo</b><div class="mut" style="font-size:12px">vendas + valor do saldo atual − compras</div></td><td class="n"><b style="font-size:16px">${res(simples)}</b><div class="mut" style="font-size:12px">${usd(w.vendeu_usd,0)} + ${usd(valor,0)} − ${usd(w.comprou_usd,0)}${w.comprou_usd>0?` · ${pc(simples/w.comprou_usd*100,1)} sobre o que pagou`:""}</div></td></tr></tbody></table></div>`;
-  const ops=(D.fluxo.todas||[]).filter(t=>t[6]===a).slice().reverse();
-  h+=`<h2>Compras e vendas desta carteira</h2><div class="card scroll" id="tb-cc"></div>`;
+    <tr style="border-top:2px solid var(--line)"><td><b>Saldo total de lucro ou prejuízo</b><div class="mut" style="font-size:12px">${nomeP}</div></td><td class="n"><b style="font-size:16px">${res(resP)}</b>${pctP!=null?` (${pc(pctP,1)})`:""}<div class="mut" style="font-size:12px">${formula}</div></td></tr></tbody></table></div>`;
+  const ops=(D.fluxo.todas||[]).filter(t=>t[6]===a&&t[0]>=ini).slice().reverse();
+  h+=`<h2 style="font-size:15px">Compras e vendas ${nomeP}</h2><div class="card scroll" id="tb-cc"></div>`;
   out.innerHTML=h;
   table("tb-cc",[{t:"Quando",f:t=>dtm(t[0]),s:t=>t[0]},{t:"Tipo",f:t=>t[1]?'<span class="up">compra</span>':'<span class="dn">venda</span>'},{t:"VELL",n:1,f:t=>big(t[2]),s:t=>t[2]},{t:"Valor",n:1,f:t=>usd(t[4],t[4]<100?2:0),s:t=>t[4]},{t:"Preço",n:1,f:t=>usd(t[5],6),s:t=>t[5]},{t:"Comparado ao preço de hoje",n:1,f:t=>pc(t[1]?(px/t[5]-1)*100:(t[5]/px-1)*100,1)},{t:"Transação",f:t=>txl(t[7])}],ops);
 }

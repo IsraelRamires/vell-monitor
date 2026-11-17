@@ -17,7 +17,9 @@ def recompute():
     data = metricas.build()
     addrs = data.pop("_enderecos_top", [])
     cart = data.pop("_carteiras", {"c": {}})
+    ev = data.pop("_cart_ev", {})
     with LOCK:
+        STATE["cart_ev"] = {k: json.dumps(v, separators=(",", ":")).encode("utf-8") for k, v in ev.items()}
         STATE["json"] = json.dumps(data, ensure_ascii=False, allow_nan=False, default=lambda o: None).encode("utf-8")
         STATE["carteiras"] = json.dumps(cart, ensure_ascii=False, allow_nan=False, separators=(",", ":"), default=lambda o: None).encode("utf-8")
         STATE["ok_em"] = int(time.time())
@@ -90,6 +92,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/carteiras":          # todas as carteiras, para a consulta de lucro/prejuízo
             with LOCK:
                 body = STATE["carteiras"]
+            self._send(body, "application/json; charset=utf-8")
+        elif path.startswith("/api/cart/"):        # histórico das carteiras que começam com esses 2 caracteres
+            with LOCK:
+                body = STATE.get("cart_ev", {}).get(path[-2:].lower(), b"{}")
             self._send(body, "application/json; charset=utf-8")
         elif path == "/api/status":
             s = {k: STATE[k] for k in ("status", "detalhe", "erro", "ok_em")}
