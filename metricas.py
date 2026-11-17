@@ -884,10 +884,29 @@ def build():
 
     # ------------------------------------------------------------ destaques automáticos
     sinais = []
-    for m in movers(d24, 3)["distribuiu"]:
-        if abs(m["delta_usd"]) >= C.BIG_TRADE_USD:
-            sinais.append({"tipo": "venda", "txt": f"Carteira {m['end'][:6]}…{m['end'][-4:]} reduziu {br(abs(m['delta']))} VELL (US$ {br(abs(m['delta_usd']))}) nas últimas 24h.",
-                           "ir": {"aba": "carteiras", "alvo": "tb-dist", "cfg": {"movWin": "24h"}}})
+    # grandes negociações nas últimas 24h (a partir de C.BIG_TRADE_USD):
+    #   compras e vendas -> a maior compra e a maior venda; só vendas -> a última venda grande; só compras -> as 3 últimas compras grandes
+    g24 = [t for t in trades if t["ts"] >= now - DAY and t["usd"] >= C.BIG_TRADE_USD]
+    gc_ = [t for t in g24 if t["lado"] == "compra"]
+    gv_ = [t for t in g24 if t["lado"] == "venda"]
+    IR_TR = {"aba": "fluxo", "alvo": "tb-trades", "cfg": {"fluxoPer": "24h"}}
+
+    def txt_trade(t, titulo):
+        a_ = t["who"] or ""
+        quem_ = f"{a_[:6]}…{a_[-4:]}" if a_ else "carteira desconhecida"
+        verbo_ = "comprou" if t["lado"] == "compra" else "vendeu"
+        px_ = f"{t['preco_usd']:.6f}".replace(".", ",")
+        quando_ = dt.datetime.utcfromtimestamp(t["ts"] + TZ)
+        return (f"{titulo}: {quem_} {verbo_} {br(t['tok'])} VELL por US$ {br(t['usd'])} "
+                f"às {quando_:%H:%M} de {quando_:%d/%m} (preço US$ {px_}).")
+    if gc_ and gv_:
+        sinais.append({"tipo": "compra", "txt": txt_trade(max(gc_, key=lambda t: t["usd"]), "Maior compra nas últimas 24h"), "ir": IR_TR})
+        sinais.append({"tipo": "venda", "txt": txt_trade(max(gv_, key=lambda t: t["usd"]), "Maior venda nas últimas 24h"), "ir": IR_TR})
+    elif gv_:
+        sinais.append({"tipo": "venda", "txt": txt_trade(gv_[-1], "Última venda grande (só houve vendas grandes nas últimas 24h)"), "ir": IR_TR})
+    elif gc_:
+        for t in gc_[-3:][::-1]:
+            sinais.append({"tipo": "compra", "txt": txt_trade(t, "Compra grande nas últimas 24h"), "ir": IR_TR})
     for ev in liq_events:
         if ev["ts"] >= now - 7 * DAY and ev["usd"] >= C.BIG_TRADE_USD:
             sinais.append({"tipo": "liquidez", "txt": f"Liquidez: {ev['tipo']} de US$ {br(ev['usd'])} em {dt.datetime.utcfromtimestamp(ev['ts'] + TZ):%d/%m %H:%M}.",
