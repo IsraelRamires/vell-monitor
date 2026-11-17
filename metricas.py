@@ -123,8 +123,8 @@ def build():
             order.append(tx)
         if addr == C.TOKEN:
             if t0 == T_TRANSFER:
-                v = int(data, 16) / D if len(data) > 2 else 0.0
-                e["tr"].append((t1, t2, v))
+                vw = int(data, 16) if len(data) > 2 else 0
+                e["tr"].append((t1, t2, vw / D, vw))
                 if deployer is None and t1 == ZERO:
                     deployer = t2
             elif t0 == T_OWNER:
@@ -170,6 +170,7 @@ def build():
     deltas_log = []          # (ts, addr, delta) para variação de saldo por período
     edges = defaultdict(set)  # ligações diretas entre carteiras (transferências fora do pool)
     holders_n = 0
+    bal_w = defaultdict(int)  # saldos exatos (unidades inteiras do contrato)
     hc = []                  # (quando, número de holders) a cada mudança
     hio = []                 # (quando, +1 carteira passou a ter VELL / -1 carteira zerou)
     holders_daily = {}
@@ -266,9 +267,12 @@ def build():
                 sth_guarda(snap_day, (snap_day + 1) * DAY - DTZ, cur_px)
             snap_day += 1
         delta = defaultdict(float)
-        for f, t, v in e["tr"]:
+        wdelta = defaultdict(int)          # o mesmo em unidades inteiras do contrato (para contar holders sem erro de arredondamento)
+        for f, t, v, vw in e["tr"]:
             delta[f] -= v
             delta[t] += v
+            wdelta[f] -= vw
+            wdelta[t] += vw
             if t in BURN_ADDRS and f != ZERO and v > 0:      # queima: VELL enviado para endereço morto/zero
                 burns.append((ts, f, v, tx, cur_px))
             if v > 0 and f in dist_hubs and t not in special and t not in dist_hubs:
@@ -302,6 +306,21 @@ def build():
                 trades.append(trade)
             else:
                 trade = None
+        # holders contados como na BscScan: todo endereço com saldo maior que zero
+        # (inclui pool, contrato, endereço de queima e carteiras com quantias mínimas)
+        for a, dw in wdelta.items():
+            if not dw:
+                continue
+            bw0 = bal_w[a]; bw1 = bw0 + dw; bal_w[a] = bw1
+            if bw0 <= 0 < bw1:
+                holders_n += 1
+                hio.append((ts, 1))
+                if a not in seen_holder:
+                    seen_holder.add(a)
+                    new_holders_daily[local_day(ts)] += 1
+            elif bw1 <= 0 < bw0:
+                holders_n -= 1
+                hio.append((ts, -1))
         for a, d in delta.items():
             if abs(d) < 1e-12:
                 continue
@@ -312,16 +331,6 @@ def build():
                 if a == DEAD or (a == ZERO and d > 0):
                     burned += max(d, 0)
                 continue
-            if a not in (C.PAIR,):
-                if before <= DUST < after:
-                    holders_n += 1
-                    hio.append((ts, 1))
-                    if a not in seen_holder:
-                        seen_holder.add(a)
-                        new_holders_daily[local_day(ts)] += 1
-                elif after <= DUST < before:
-                    holders_n -= 1
-                    hio.append((ts, -1))
             if a in special:
                 continue
             if a in KNOWN:
