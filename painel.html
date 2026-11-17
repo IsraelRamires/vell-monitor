@@ -851,7 +851,7 @@ function rQueimas(){
     ["Valor queimado hoje",usd(Q.usd_agora,0),`valia ${usd(Q.usd_na_hora,0)} na hora das queimas`],
     ["Número de queimas",nf(Q.n),`feitas por ${nf(Q.carteiras)} endereços`],
     ["Ritmo de queima",big(Q.ritmo_dia)+" VELL/dia","média dos últimos 30 dias"],
-    ["Projeção em 1 ano",pq(Q.proj_ano_pct),"do fornecimento, se o ritmo continuar"],
+    ["Projeção em 1 ano",`${pq(Q.proj_ano_pct)} · ${big(Q.ritmo_dia*365)} VELL`,`${nf(Q.ritmo_dia*365)} VELL queimados em 12 meses (% do fornecimento), se o ritmo dos últimos 30 dias continuar`],
     ["Por contratos (automática)",nf(Q.automatica/Q.total*100,1)+"%",`${big(Q.automatica)} VELL`],
     ["Por carteiras e outros",nf(Q.manual/Q.total*100,1)+"%",`${big(Q.manual)} VELL`],
     ["Última queima",ago(Q.ultima)+" atrás",dtm(Q.ultima)]]);
