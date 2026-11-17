@@ -176,6 +176,7 @@ def build():
     new_holders_daily = defaultdict(int)
     seen_holder = set()
     burned = 0.0
+    burns = []               # (quando, quem queimou, VELL, transação, preço US$ no momento)
     dist_hubs = {a for a in (owner, deployer) if a}
     # --- Short-Term Holders: cada carteira guarda "lotes" [quando recebeu, quantidade, preço de custo]
     lots = defaultdict(deque)
@@ -255,6 +256,8 @@ def build():
         for f, t, v in e["tr"]:
             delta[f] -= v
             delta[t] += v
+            if t in BURN_ADDRS and f != ZERO and v > 0:      # queima: VELL enviado para endereço morto/zero
+                burns.append((ts, f, v, tx, cur_px))
             if v > 0 and f in dist_hubs and t not in special and t not in dist_hubs:
                 wallet(t)["from_owner"] += v
             if v > 0 and t in dist_hubs and f not in special and f not in dist_hubs:
@@ -1144,6 +1147,51 @@ def build():
                            "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} desde as 21:00 "
                                   f"(média diária dos últimos 7 dias: US$ {br(media_)}).", "ir": IR_LTH})
 
+    # ------------------------------------------------------------ queimas (VELL enviado ao endereço morto/zero)
+    def q_janela(sec):
+        b_ = [b for b in burns if b[0] >= now - sec]
+        return {"qtd": sum(b[2] for b in b_), "n": len(b_), "usd": sum(b[2] * (b[4] or 0) for b in b_),
+                "pct": sum(b[2] for b in b_) / total_supply * 100, "carteiras": len({b[1] for b in b_})}
+    q_dia = defaultdict(lambda: [0.0, 0, 0.0])          # por dia: [VELL, nº de queimas, US$ na hora]
+    q_quem = {}
+    for ts_, f_, v_, tx_, px_ in burns:
+        x_ = q_dia[local_day(ts_)]; x_[0] += v_; x_[1] += 1; x_[2] += v_ * (px_ or 0)
+        w_ = q_quem.get(f_)
+        if w_ is None:
+            w_ = q_quem[f_] = {"end": f_, "rotulo": label(f_), "tipo": kind(f_), "n": 0, "qtd": 0.0, "usd": 0.0, "primeira": ts_, "ultima": ts_}
+        w_["n"] += 1; w_["qtd"] += v_; w_["usd"] += v_ * (px_ or 0); w_["ultima"] = ts_
+    q_total = sum(b[2] for b in burns)
+    q_serie, acum_ = [], 0.0
+    if burns:
+        for d_ in range(local_day(burns[0][0]), local_day(now) + 1):
+            x_ = q_dia.get(d_, [0.0, 0, 0.0]); acum_ += x_[0]
+            q_serie.append({"dia": day_str(d_), "qtd": x_[0], "n": x_[1], "usd": x_[2], "acum": acum_, "pct_acum": acum_ / total_supply * 100})
+    for w_ in q_quem.values():
+        w_["pct"] = w_["qtd"] / q_total * 100 if q_total else 0
+    q_auto = sum(w_["qtd"] for w_ in q_quem.values() if w_["tipo"] == "contrato")
+    q7, q30 = q_janela(7 * DAY), q_janela(30 * DAY)
+    ritmo_ = q30["qtd"] / min(30.0, max(1.0, (now - burns[0][0]) / DAY)) if burns else 0.0
+    inicio_dia_ = local_day(now) * DAY - DTZ
+    queimas = {
+        "total": q_total, "pct": q_total / total_supply * 100, "n": len(burns), "usd_agora": q_total * price,
+        "usd_na_hora": sum(b[2] * (b[4] or 0) for b in burns), "carteiras": len(q_quem),
+        "primeira": burns[0][0] if burns else None, "ultima": burns[-1][0] if burns else None,
+        "automatica": q_auto, "manual": q_total - q_auto,
+        "dia": q_janela(now - inicio_dia_), "24h": q_janela(DAY), "7d": q7, "30d": q30,
+        "ritmo_dia": ritmo_, "proj_ano_pct": ritmo_ * 365 / total_supply * 100,
+        "saldo_morto": max(bal.get(DEAD, 0.0), 0.0), "saldo_zero": max(bal.get(ZERO, 0.0), 0.0),
+        "serie": q_serie,
+        "quem": sorted(q_quem.values(), key=lambda w: -w["qtd"])[:40],
+        # últimas queimas, compactas: [quando, quem, VELL, US$ na hora, transação]
+        "recentes": [[b[0], b[1], round(b[2], 4), round(b[2] * (b[4] or 0), 4), b[3]] for b in burns[-500:][::-1]],
+        "maiores": [[b[0], b[1], round(b[2], 4), round(b[2] * (b[4] or 0), 4), b[3]] for b in sorted(burns, key=lambda b: -b[2])[:30]],
+    }
+    q24 = queimas["24h"]
+    if burns:
+        sinais.append({"tipo": "fluxo", "txt": f"Queima: {br(q24['qtd'])} VELL (US$ {br(q24['usd'])}) queimados nas últimas 24h em {q24['n']} queimas. "
+                                               f"Total já queimado: {br(q_total)} VELL ({fn(q_total / total_supply * 100, 3)}% do fornecimento).",
+                       "ir": {"aba": "queimas", "alvo": "qm-kpis"}})
+
     def trade_out(t):
         a = t["who"] or ""
         return {"ts": t["ts"], "lado": t["lado"], "tok": t["tok"], "bnb": t["bnb"], "usd": t["usd"],
@@ -1209,6 +1257,7 @@ def build():
             "rotulos": {a: label(a) for a in {t["who"] for t in trades if t["who"]} if label(a)},
             "taxa_compra": tax_buy, "taxa_venda": tax_sell, "taxa_serie": tax_series,
         },
+        "queimas": queimas,
         "liquidez": {
             "eventos": liq_events[::-1][:100], "lp_holders": lp_holders, "lp_travado_pct": lp_locked,
             "impacto": impacts, "dono": owner, "criador": deployer, "trocas_dono": owner_changes,

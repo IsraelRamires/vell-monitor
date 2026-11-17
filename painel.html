@@ -321,6 +321,41 @@ header #status{margin-left:0}
   <div class="card" id="contrato"></div>
 </section>
 
+<section id="t-queimas">
+  <h2>Queimas de VELL <button class="ajuda" id="qm-ajuda-btn" onclick="ajudaQm()">Entenda ▾</button></h2>
+  <div class="card ajuda-txt" id="qm-ajuda" style="display:none">
+    <h4>O que é uma queima</h4>
+    <p>Queimar é enviar VELL para um endereço que ninguém controla (o "endereço morto" <code>0x…dEaD</code> ou o endereço zero). Esses VELL saem de circulação para sempre: ninguém consegue vender nem mover.</p>
+    <h4>De onde vêm as queimas</h4>
+    <ul><li><b>Contratos:</b> programas que queimam sozinhos, por exemplo a cada compra ou distribuição. Geram muitas queimas pequenas.</li>
+    <li><b>Carteiras e outros:</b> pessoas ou projetos que enviaram VELL para o endereço morto por conta própria.</li></ul>
+    <h4>Como ler</h4>
+    <ul><li><b>Total queimado:</b> quanto do fornecimento já foi destruído.</li>
+    <li><b>Ritmo:</b> média diária dos últimos 30 dias. A projeção anual mostra quanto do fornecimento sairia de circulação em um ano se esse ritmo continuar.</li>
+    <li><b>Valor na hora:</b> quanto valiam os VELL queimados no momento da queima. <b>Valor hoje:</b> quanto valeriam pelo preço atual.</li></ul>
+    <p>Os dias fecham às 21:00 (horário de Brasília), como no restante do painel.</p>
+  </div>
+  <div class="grid" id="qm-kpis"></div>
+  <h2>Queimas por período</h2>
+  <div class="grid" id="qm-per"></div>
+  <h2>Queimas por dia</h2>
+  <div class="seg" id="qm-seg"></div>
+  <div class="card"><div class="chart"><canvas id="c-qm"></canvas></div></div>
+  <h2>Total queimado ao longo do tempo</h2>
+  <div class="card"><div class="chart sm"><canvas id="c-qm-acum"></canvas></div></div>
+  <div class="two">
+    <div><h2>Quem mais queimou</h2>
+      <p class="exp">Endereços que enviaram VELL para queima, do maior para o menor total.</p>
+      <div class="card scroll" id="tb-qm-quem"></div></div>
+    <div><h2>Maiores queimas</h2>
+      <p class="exp">As 30 maiores queimas individuais desde o lançamento.</p>
+      <div class="card scroll" id="tb-qm-maiores"></div></div>
+  </div>
+  <h2>Últimas queimas</h2>
+  <div class="seg" id="qm-filtro"></div>
+  <div class="card scroll" id="tb-qm-rec"></div>
+</section>
+
 <section id="t-bnb">
   <h2>O VELL acompanha o <span id="rel-nome">BNB</span>? <button class="ajuda" id="bnb-ajuda-btn" onclick="ajudaBnb()">Entenda ▾</button></h2>
   <div class="card ajuda-txt" id="bnb-ajuda" style="display:none"></div>
@@ -375,7 +410,7 @@ function refCopiaAntiga(c,ok){const t=document.createElement("textarea");t.value
 document.addEventListener("keydown",e=>{if(e.key==="Escape")refFechar()});
 document.addEventListener("click",e=>{document.querySelectorAll("details.multi[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});
 const $=id=>document.getElementById(id);
-const TABS=[["geral","Visão geral"],["volume","Volume"],["carteiras","Baleias e carteiras"],["fluxo","Compras e vendas"],["liquidez","Liquidez e contrato"],["bnb","VELL x tokens"],["leitura","Leitura do mercado"]];
+const TABS=[["geral","Visão geral"],["volume","Volume"],["carteiras","Baleias e carteiras"],["fluxo","Compras e vendas"],["liquidez","Liquidez e contrato"],["bnb","VELL x tokens"],["queimas","Queimas / burn"],["leitura","Leitura do mercado"]];
 let D=null, tab=localStorage.getItem("vell_tab")||"geral", charts={}, range={preco:"7d",bnb:"7d",perfil:"tudo",liqb:"30d"}, showPerfil=true, lthK=localStorage.getItem("vell_lth")||"30d", sthK=localStorage.getItem("vell_sth")||"7d", leiPz="curto", relRef=localStorage.getItem("vell_relref")||"BNB", liqModo=localStorage.getItem("vell_liqmodo")||"bnb", sel=(()=>{try{return JSON.parse(localStorage.getItem("vell_sel"))||["BNB"]}catch(e){return ["BNB"]}})(), tipo=localStorage.getItem("vell_tipo")||"linha", vela=localStorage.getItem("vell_vela")||"auto", movWin="24h", fluxoF="todas", fluxoPer="24h";
 const nf=(n,d=0)=>n==null||isNaN(n)?"—":n.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const usd=(n,d)=>n==null||isNaN(n)?"—":"US$ "+nf(n,d??(Math.abs(n)<1?(Math.abs(n)<0.01?6:4):Math.abs(n)<100?2:0));
@@ -734,7 +769,42 @@ function irPara(i){
     box.classList.remove("flash");void box.offsetWidth;box.classList.add("flash");
   },30);
 }
-const R={geral:rGeral,leitura:rLeitura,volume:rVolume,carteiras:rCarteiras,fluxo:rFluxo,liquidez:rLiquidez,bnb:rBnb};
+function ajudaQm(){const e=$("qm-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("qm-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+let qmPer=localStorage.getItem("vell_qmper")||"30d", qmMed=localStorage.getItem("vell_qmmed")||"qtd", qmFil="todas";
+function rQueimas(){
+  const Q=D.queimas,r=D.resumo;
+  if(!Q||!Q.n){$("qm-kpis").innerHTML='<div class="mut">Nenhuma queima registrada ainda.</div>';return}
+  const pq=x=>nf(x,x<0.01?4:3)+"%";
+  kpis("qm-kpis",[
+    ["Total queimado",big(Q.total)+" VELL",`${pq(Q.pct)} do fornecimento`],
+    ["Valor queimado hoje",usd(Q.usd_agora,0),`valia ${usd(Q.usd_na_hora,0)} na hora das queimas`],
+    ["Número de queimas",nf(Q.n),`feitas por ${nf(Q.carteiras)} endereços`],
+    ["Ritmo de queima",big(Q.ritmo_dia)+" VELL/dia","média dos últimos 30 dias"],
+    ["Projeção em 1 ano",pq(Q.proj_ano_pct),"do fornecimento, se o ritmo continuar"],
+    ["Por contratos (automática)",nf(Q.automatica/Q.total*100,1)+"%",`${big(Q.automatica)} VELL`],
+    ["Por carteiras e outros",nf(Q.manual/Q.total*100,1)+"%",`${big(Q.manual)} VELL`],
+    ["Última queima",ago(Q.ultima)+" atrás",dtm(Q.ultima)]]);
+  const P=[["dia","Hoje (desde as 21:00)"],["24h","Últimas 24 horas"],["7d","Últimos 7 dias"],["30d","Últimos 30 dias"]];
+  kpis("qm-per",P.map(([k,n])=>{const x=Q[k];return [n,big(x.qtd)+" VELL",`${usd(x.usd,x.usd<100?2:0)} · ${nf(x.n)} queimas · ${pq(x.pct)}`]}));
+  seg($("qm-seg"),[["7d","7 dias"],["30d","30 dias"],["90d","90 dias"],["tudo","Desde a primeira queima"]],qmPer,v=>{qmPer=v;localStorage.setItem("vell_qmper",v);rQueimas()},"Período");
+  $("qm-seg").insertAdjacentHTML("beforeend",selHtml("Mostrar",[["qtd","VELL queimados"],["usd","Valor em US$ (na hora)"],["n","Número de queimas"]],qmMed,"qmmed"));
+  $("qm-seg").querySelector('[data-k="qmmed"]').onchange=e=>{qmMed=e.target.value;localStorage.setItem("vell_qmmed",qmMed);rQueimas()};
+  const nd={"7d":7,"30d":30,"90d":90,"tudo":1e9}[qmPer],S=Q.serie.slice(-Math.min(nd,Q.serie.length));
+  const fm={qtd:x=>big(x)+" VELL",usd:x=>usd(x,2),n:x=>nf(x)+" queimas"}[qmMed],nm={qtd:"VELL queimados",usd:"Valor queimado (US$ na hora)",n:"Número de queimas"}[qmMed];
+  chart("c-qm",{type:"bar",data:{labels:S.map(x=>dia(x.dia)),datasets:[{label:nm,data:S.map(x=>x[qmMed]),backgroundColor:"#ff7a1a",borderRadius:3}]},
+    options:{plugins:{tooltip:{callbacks:{label:c=>`${nm}: ${fm(c.parsed.y)}`,afterLabel:c=>{const x=S[c.dataIndex];return `${nf(x.n)} queimas · ${big(x.qtd)} VELL · ${usd(x.usd,2)}`}}}},scales:{y:{ticks:{callback:v=>qmMed==="usd"?"US$ "+nf(v,0):big(v)}}}}});
+  chart("c-qm-acum",{type:"line",data:{labels:S.map(x=>dia(x.dia)),datasets:[line("Total queimado (% do fornecimento)",S.map(x=>x.pct_acum),"#ff7a1a",{fill:true,backgroundColor:"rgba(255,122,26,.15)"})]},
+    options:{plugins:{tooltip:{callbacks:{label:c=>{const x=S[c.dataIndex];return `Total queimado: ${big(x.acum)} VELL (${pq(x.pct_acum)})`}}}},scales:{y:{ticks:{callback:v=>nf(v,3)+"%"}}}}});
+  const tag=w=>w.rotulo||(w.tipo==="contrato"?"contrato":"");
+  table("tb-qm-quem",[{t:"Quem",f:w=>addr(w.end,tag(w))},{t:"VELL queimados",n:1,f:w=>big(w.qtd),s:w=>w.qtd},{t:"% das queimas",n:1,f:w=>nf(w.pct,1)+"%",s:w=>w.pct},{t:"Queimas",n:1,f:w=>nf(w.n),s:w=>w.n},{t:"Valor na hora",n:1,f:w=>usd(w.usd,0),s:w=>w.usd},{t:"Última",f:w=>dtm(w.ultima),s:w=>w.ultima}],Q.quem);
+  const tipoDe=a=>(Q.quem.find(w=>w.end===a)||{}).tipo,lb=a=>{const w=Q.quem.find(x=>x.end===a);return w?tag(w):""};
+  const cols=[{t:"Quando",f:x=>dtm(x[0]),s:x=>x[0]},{t:"Quem",f:x=>addr(x[1],lb(x[1]))},{t:"VELL",n:1,f:x=>nf(x[2],x[2]<10?2:0),s:x=>x[2]},{t:"Valor na hora",n:1,f:x=>usd(x[3],x[3]<1?4:2),s:x=>x[3]},{t:"Transação",f:x=>txl(x[4])}];
+  table("tb-qm-maiores",cols,Q.maiores);
+  seg($("qm-filtro"),[["todas","Todas"],["contrato","Só de contratos"],["outros","Só de carteiras e outros"],["grandes","Só acima de 1.000 VELL"]],qmFil,v=>{qmFil=v;rQueimas()},"Mostrar");
+  const rec=Q.recentes.filter(x=>qmFil==="todas"||(qmFil==="grandes"?x[2]>=1000:qmFil==="contrato"?tipoDe(x[1])==="contrato":tipoDe(x[1])!=="contrato")).slice(0,200);
+  table("tb-qm-rec",cols,rec);
+}
+const R={geral:rGeral,leitura:rLeitura,volume:rVolume,carteiras:rCarteiras,fluxo:rFluxo,liquidez:rLiquidez,bnb:rBnb,queimas:rQueimas};
 function render(){
   if(!D||D.vazio)return;
   $("wait").style.display="none";$("main").style.display="";$("logo").style.display="";$("ref-btn").style.display=D.indicacao&&D.indicacao.codigo?"":"none";
