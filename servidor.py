@@ -9,15 +9,17 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vellcfg as C
 import coletor, metricas
 
-STATE = {"json": b'{"vazio": true}', "status": "iniciando", "detalhe": "", "erro": "", "ok_em": 0}
+STATE = {"json": b'{"vazio": true}', "carteiras": b'{"c": {}}', "status": "iniciando", "detalhe": "", "erro": "", "ok_em": 0}
 LOCK = threading.Lock()
 
 
 def recompute():
     data = metricas.build()
     addrs = data.pop("_enderecos_top", [])
+    cart = data.pop("_carteiras", {"c": {}})
     with LOCK:
         STATE["json"] = json.dumps(data, ensure_ascii=False, allow_nan=False, default=lambda o: None).encode("utf-8")
+        STATE["carteiras"] = json.dumps(cart, ensure_ascii=False, allow_nan=False, separators=(",", ":"), default=lambda o: None).encode("utf-8")
         STATE["ok_em"] = int(time.time())
     return addrs
 
@@ -84,6 +86,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/dados":
             with LOCK:
                 body = STATE["json"]
+            self._send(body, "application/json; charset=utf-8")
+        elif path == "/api/carteiras":          # todas as carteiras, para a consulta de lucro/prejuízo
+            with LOCK:
+                body = STATE["carteiras"]
             self._send(body, "application/json; charset=utf-8")
         elif path == "/api/status":
             s = {k: STATE[k] for k in ("status", "detalhe", "erro", "ok_em")}

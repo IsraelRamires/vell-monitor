@@ -86,6 +86,10 @@ header #status{margin-left:0}
 .loja .qr{background:#fff;padding:8px;border-radius:8px;display:inline-block;margin:8px 0}
 .loja a{display:block;background:#262a33;color:#fff;border-radius:8px;padding:8px;text-decoration:none;font-weight:600}
 .loja a:hover{background:#333846}
+.cc-busca{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cc-busca input{flex:1;min-width:220px;background:#0b0d11;color:var(--txt,#e8eaee);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font:inherit;font-family:ui-monospace,Consolas,monospace;font-size:13px}
+.cc-busca input:focus{outline:none;border-color:#ff7a1a}
+.cc-total{font-size:15px;margin:12px 0 4px}
 .sec{background:transparent;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit}
 @media(max-width:520px){.lojas{grid-template-columns:1fr}.loja .qr{display:none}}
 .ajuda{background:transparent;color:#ffb066;border:1px solid #5a3a1a;border-radius:999px;padding:3px 11px;margin-left:8px;cursor:pointer;font:inherit;font-size:12.5px;font-weight:400;vertical-align:middle}
@@ -216,6 +220,22 @@ header #status{margin-left:0}
     <div><h2>Parte dos VELL em mãos de longo prazo (%)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-qtd"></canvas></div></div></div>
     <div><h2>Vendas de holders de longo prazo por dia (US$)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-venda"></canvas></div></div></div>
   </div>
+  <h2>Consultar lucro ou prejuízo de uma carteira <button class="ajuda" id="cc-ajuda-btn" onclick="ajudaCc()">Entenda ▾</button></h2>
+  <div class="card ajuda-txt" id="cc-ajuda" style="display:none">
+    <h4>Como o resultado é calculado</h4>
+    <ul><li><b>Custo de cada VELL:</b> o preço pago na compra no pool. VELL recebido por transferência entra pelo preço de mercado no momento em que chegou.</li>
+    <li><b>VELL sem custo:</b> recebido antes do início das negociações (distribuição inicial). Não tem preço de referência, por isso aparece à parte.</li>
+    <li><b>Resultado em aberto:</b> quanto o saldo atual vale hoje menos quanto ele custou. Só vira lucro ou prejuízo de verdade se vender.</li>
+    <li><b>Resultado das vendas:</b> o que recebeu em cada venda menos o custo dos VELL vendidos. Os VELL mais antigos da carteira saem primeiro.</li>
+    <li><b>Preço para empatar:</b> o custo médio dos VELL que a carteira tem hoje.</li>
+    <li><b>Conta simples:</b> só o dinheiro que passou pelo pool: o que recebeu nas vendas, mais o valor atual do saldo, menos o que pagou nas compras. Ignora transferências.</li></ul>
+    <p>É uma estimativa feita com os dados públicos da blockchain. Não inclui taxa de gás, e transferências entre carteiras da mesma pessoa podem distorcer o custo.</p>
+  </div>
+  <div class="card cc-busca">
+    <input id="cc-end" type="text" placeholder="Cole o endereço da carteira (0x…)" spellcheck="false" autocomplete="off" onkeydown="if(event.key==='Enter')consultarCarteira()">
+    <button class="refbtn" onclick="consultarCarteira()">Consultar</button>
+  </div>
+  <div id="cc-res"></div>
 </section>
 
 <section id="t-volume">
@@ -524,6 +544,9 @@ const LCOR={"ultra otimista":"#00d18f","otimista":"#2ec4a6","neutro":"#9aa0aa","
 const leiRot=sc=>sc==null?null:sc>=50?"ultra otimista":sc>=15?"otimista":sc>-15?"neutro":sc>-50?"pessimista":"ultra pessimista";
 function ajudaLei(){const e=$("lei-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("lei-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
 function rLeitura(){
+  // consulta de carteira: lembra o último endereço e atualiza o resultado com o preço novo
+  if(!$("cc-end").value){try{$("cc-end").value=localStorage.getItem("vell_cc")||""}catch(e){}}
+  if($("cc-res").innerHTML&&$("cc-end").value)consultarCarteira();
   rSth();rLth();
   const L=D.leitura||{},P=L.prazos||{},ord=["curto","medio","longo","anual","tudo"].filter(k=>P[k]);
   if(!ord.length){$("lei-cards").innerHTML='<div class="mut">Ainda não há histórico suficiente para calcular a leitura.</div>';return}
@@ -769,6 +792,53 @@ function irPara(i){
     box.classList.remove("flash");void box.offsetWidth;box.classList.add("flash");
   },30);
 }
+function ajudaCc(){const e=$("cc-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("cc-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
+let CART=null;
+async function consultarCarteira(){
+  const a=($("cc-end").value||"").trim().toLowerCase(),out=$("cc-res");
+  if(!/^0x[0-9a-f]{40}$/.test(a)){out.innerHTML='<div class="card mut">Endereço inválido. Ele começa com 0x e tem 42 caracteres.</div>';return}
+  try{localStorage.setItem("vell_cc",a)}catch(e){}
+  if(!CART||CART.gerado_em<D.gerado_em){
+    out.innerHTML='<div class="card mut">Carregando as carteiras…</div>';
+    try{CART=await fetch("api/carteiras?t="+Date.now()).then(r=>r.json())}catch(e){out.innerHTML='<div class="card mut">Não foi possível carregar os dados das carteiras. Tente de novo em instantes.</div>';return}
+  }
+  mostrarCarteira(a);
+}
+function mostrarCarteira(a){
+  const out=$("cc-res"),row=CART&&CART.c&&CART.c[a];
+  if(!row){out.innerHTML=`<div class="card mut">Nenhuma movimentação de VELL encontrada para ${a.slice(0,6)}…${a.slice(-4)}. Pode ser o pool, o contrato, um endereço de queima ou uma carteira que nunca teve VELL.</div>`;return}
+  const w={};CART.campos.forEach((k,i)=>w[k]=row[i]);
+  const px=D.resumo.preco,valor=w.saldo*px;
+  const valorCusto=w.qtd_com_custo*px,aberto=w.custo_saldo>0?valorCusto-w.custo_saldo:null,abertoPct=w.custo_saldo>0?aberto/w.custo_saldo*100:null;
+  const empate=w.qtd_com_custo>0?w.custo_saldo/w.qtd_com_custo:null,real=w.realizado,realPct=w.custo_vendido>0?real/w.custo_vendido*100:null;
+  const total=(aberto||0)+real,base=(w.custo_saldo||0)+(w.custo_vendido||0),totalPct=base>0?total/base*100:null;
+  const simples=w.vendeu_usd+valor-w.comprou_usd;
+  const res=x=>x==null?"—":`<span class="${x>0?'up':x<0?'dn':''}">${x>0?'+':x<0?'−':''}${usd(Math.abs(x),Math.abs(x)<100?2:0)}</span>`;
+  const vira=total>0?'<span class="up">lucro</span>':total<0?'<span class="dn">prejuízo</span>':"empate";
+  const tag=w.rotulo||(w.tipo==="contrato"?"contrato":"");
+  let h=`<div class="cc-total">Carteira ${addr(a,tag)}: resultado provável de ${vira} de <b>${res(total)}</b>${totalPct!=null?` (${pc(totalPct,1)} sobre o custo)`:""}.${w.qtd_sem_custo>DUSTJ||w.venda_sem_custo>0?` <span class="mut">Fora dessa conta: ${w.qtd_sem_custo>DUSTJ?`${big(w.qtd_sem_custo)} VELL recebidos sem custo, que valem ${usd(w.qtd_sem_custo*px,0)} hoje`:""}${w.qtd_sem_custo>DUSTJ&&w.venda_sem_custo>0?", e ":""}${w.venda_sem_custo>0?`${usd(w.venda_sem_custo,0)} já recebidos vendendo VELL sem custo`:""}.</span>`:""}</div>`;
+  h+=`<div class="grid" id="cc-kpis">${[
+    ["Saldo atual",big(w.saldo)+" VELL",`vale ${usd(valor,valor<100?2:0)} hoje`],
+    ["Resultado em aberto",res(aberto),aberto==null?"sem VELL com custo conhecido":`${pc(abertoPct,1)} · custo ${usd(w.custo_saldo,w.custo_saldo<100?2:0)}`],
+    ["Preço para empatar",empate?usd(empate,6):"—",empate?`preço agora: ${usd(px,6)} (${pc((px/empate-1)*100,1)})`:""],
+    ["Resultado das vendas",w.custo_vendido>0?res(real):"—",realPct!=null?`${pc(realPct,1)} sobre o custo do que vendeu`:w.n_vendas?"só vendeu VELL sem custo":"não vendeu"],
+    ["VELL sem custo",w.qtd_sem_custo>DUSTJ?big(w.qtd_sem_custo)+" VELL":"—",w.qtd_sem_custo>DUSTJ?`recebidos antes das negociações · valem ${usd(w.qtd_sem_custo*px,0)}`:"nenhum"],
+    ["Conta simples",res(simples),`vendas ${usd(w.vendeu_usd,0)} + saldo ${usd(valor,0)} − compras ${usd(w.comprou_usd,0)}`],
+  ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join("")}</div>`;
+  h+=`<div class="card" style="margin-top:10px"><table><tbody>
+    <tr><td>Compras no pool</td><td class="n">${nf(w.n_compras)} compras · ${big(w.comprou)} VELL · ${usd(w.comprou_usd,0)}</td></tr>
+    <tr><td>Vendas no pool</td><td class="n">${nf(w.n_vendas)} vendas · ${big(w.vendeu)} VELL · ${usd(w.vendeu_usd,0)}</td></tr>
+    <tr><td>Recebeu por transferência</td><td class="n">${big(w.recebeu)} VELL</td></tr>
+    <tr><td>Enviou por transferência</td><td class="n">${big(w.enviou)} VELL</td></tr>
+    ${w.venda_sem_custo>0?`<tr><td>Vendas de VELL sem custo</td><td class="n">${usd(w.venda_sem_custo,0)} (fora do resultado das vendas)</td></tr>`:""}
+    <tr><td>Primeira movimentação</td><td class="n">${dtm(w.primeira)}</td></tr>
+    <tr><td>Última movimentação</td><td class="n">${dtm(w.ultima)} (${ago(w.ultima)} atrás)</td></tr></tbody></table></div>`;
+  const ops=(D.fluxo.todas||[]).filter(t=>t[6]===a).slice().reverse();
+  h+=`<h2>Compras e vendas desta carteira</h2><div class="card scroll" id="tb-cc"></div>`;
+  out.innerHTML=h;
+  table("tb-cc",[{t:"Quando",f:t=>dtm(t[0]),s:t=>t[0]},{t:"Tipo",f:t=>t[1]?'<span class="up">compra</span>':'<span class="dn">venda</span>'},{t:"VELL",n:1,f:t=>big(t[2]),s:t=>t[2]},{t:"Valor",n:1,f:t=>usd(t[4],t[4]<100?2:0),s:t=>t[4]},{t:"Preço",n:1,f:t=>usd(t[5],6),s:t=>t[5]},{t:"Comparado ao preço de hoje",n:1,f:t=>pc(t[1]?(px/t[5]-1)*100:(t[5]/px-1)*100,1)},{t:"Transação",f:t=>txl(t[7])}],ops);
+}
+const DUSTJ=1e-6;
 function ajudaQm(){const e=$("qm-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("qm-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
 let qmPer=localStorage.getItem("vell_qmper")||"30d", qmMed=localStorage.getItem("vell_qmmed")||"qtd", qmFil="todas";
 function rQueimas(){

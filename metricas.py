@@ -163,7 +163,7 @@ def build():
             w = W[a] = {"first": None, "last": None, "buy_tok": 0.0, "buy_usd": 0.0, "buy_bnb": 0.0, "n_buy": 0,
                         "sell_tok": 0.0, "sell_usd": 0.0, "sell_bnb": 0.0, "n_sell": 0,
                         "in_tok": 0.0, "out_tok": 0.0, "cost": 0.0, "qty": 0.0, "realized": 0.0,
-                        "from_owner": 0.0}
+                        "from_owner": 0.0, "real_lot": 0.0, "custo_vendido": 0.0, "venda_sem_custo": 0.0}
         return w
 
     trades = []
@@ -349,6 +349,10 @@ def build():
                         usa = min(falta, lt[1])
                         uv = min(usa, resta_v)
                         if uv > 0 and pv_:
+                            if lt[2]:      # resultado da venda, lote a lote (preço de venda - custo do lote)
+                                w["real_lot"] += uv * (pv_ - lt[2]); w["custo_vendido"] += uv * lt[2]
+                            else:
+                                w["venda_sem_custo"] += uv * pv_
                             idade = ts - lt[0]
                             for k_ in STH_THR:
                                 if idade < lim_de(k_, ts):
@@ -565,6 +569,27 @@ def build():
                     "total": w["realized"] + unreal, "comprou_usd": w["buy_usd"], "vendeu_usd": w["sell_usd"],
                     "saldo": b, "n": w["n_buy"] + w["n_sell"], "recebeu": w["in_tok"]})
     pnl.sort(key=lambda x: -x["total"])
+
+    # consulta de carteira: todas as carteiras, compactas (vai num arquivo separado, api/carteiras)
+    CAMPOS_CART = ["saldo", "comprou", "comprou_usd", "n_compras", "vendeu", "vendeu_usd", "n_vendas", "recebeu", "enviou",
+                   "realizado", "custo_vendido", "venda_sem_custo", "custo_saldo", "qtd_com_custo", "qtd_sem_custo", "primeira", "ultima", "tipo", "rotulo"]
+    carteiras_idx = {}
+    for a, w in W.items():
+        if a in special:
+            continue
+        b = max(bal.get(a, 0.0), 0.0)
+        c_ = q_ = s_ = 0.0
+        for lt in lots.get(a, ()):
+            if lt[1] <= DUST:
+                continue
+            if lt[2]:
+                c_ += lt[1] * lt[2]; q_ += lt[1]
+            else:
+                s_ += lt[1]
+        r6 = lambda x: round(x, 6)
+        carteiras_idx[a] = [r6(b), r6(w["buy_tok"]), r6(w["buy_usd"]), w["n_buy"], r6(w["sell_tok"]), r6(w["sell_usd"]), w["n_sell"],
+                            r6(w["in_tok"]), r6(w["out_tok"]), r6(w["real_lot"]), r6(w["custo_vendido"]), r6(w["venda_sem_custo"]), r6(c_), r6(q_), r6(s_), w["first"], w["last"],
+                            kind(a), label(a)]
 
     # grupos de carteiras ligadas por transferências diretas
     hubs = {a for a, s in edges.items() if len(s) > 15} | dist_hubs
@@ -1285,7 +1310,8 @@ def build():
         "tokens": tokens,
         "tempo_calculo": round(time.time() - t_start, 2),
     }
-    out["_enderecos_top"] = [a for a, _ in holders[:150]] + [x["end"] for x in insiders[:60]]
+    out["_carteiras"] = {"gerado_em": now, "preco": price, "campos": CAMPOS_CART, "c": carteiras_idx}
+    out["_enderecos_top"] =[a for a, _ in holders[:150]] + [x["end"] for x in insiders[:60]]
     return out
 
 
