@@ -266,8 +266,9 @@ header #status{margin-left:0}
     <div><h2>Por dia</h2><div class="card scroll" id="tb-dia"></div></div>
   </div>
   <h2>Em que dia e hora se negocia mais</h2>
-  <p class="exp">Volume em dólar por dia da semana e hora (horário de Brasília). Quanto mais forte a cor, mais volume.</p>
+  <p class="exp">Volume em dólar por dia da semana e hora (horário de Brasília). Quanto mais forte a cor, mais volume. Em <b style="color:#2ec4a6">verde</b>, os 10 horários com mais volume (o número é a posição no ranking); o dia e a hora com mais volume também ficam em verde.</p>
   <div class="card"><div class="heat" id="heat"></div></div>
+  <div class="grid" id="heat-top" style="margin-top:10px"></div>
 </section>
 
 <section id="t-carteiras">
@@ -576,9 +577,19 @@ function rVolume(){
   chart("c-net",{type:"bar",data:{labels:d.map(x=>dia(x.periodo)),datasets:[{label:"Líquido",data:d.map(x=>x.liquido_usd),backgroundColor:d.map(x=>x.liquido_usd>=0?"#2ec4a6":"#ff4d4f")}]},options:{plugins:{legend:{display:false}}}});
   table("tb-sem",volCols,V.semanal,{sort:{i:0,d:-1}});table("tb-mes",volCols,V.mensal,{sort:{i:0,d:-1}});table("tb-ano",volCols,V.anual,{sort:{i:0,d:-1}});table("tb-dia",volCols,d,{sort:{i:0,d:-1}});
   const mx=Math.max(1,...V.calor.flat()),dn=["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"];
-  let h=`<div></div>`+[...Array(24).keys()].map(i=>`<div>${i}h</div>`).join("");
-  V.calor.forEach((row,i)=>{h+=`<div>${dn[i]}</div>`+row.map((v,j)=>`<div title="${dn[i]} ${j}h: ${usd(v,0)}" style="background:rgba(255,77,79,${(0.06+0.94*Math.sqrt(v/mx)).toFixed(3)})"></div>`).join("")});
+  // os 10 horários com mais volume ficam em verde, com a posição no ranking
+  const cel=[];V.calor.forEach((row,i)=>row.forEach((v,j)=>{if(v>0)cel.push({i,j,v})}));cel.sort((x,y)=>y.v-x.v);
+  const rank={};cel.slice(0,10).forEach((c,k)=>rank[c.i+"-"+c.j]=k+1);
+  const porDia=V.calor.map(r=>r.reduce((a,b)=>a+b,0)),porHora=[...Array(24).keys()].map(j=>V.calor.reduce((a,r)=>a+r[j],0));
+  const dTop=porDia.indexOf(Math.max(...porDia)),hTop=porHora.indexOf(Math.max(...porHora)),tot=porDia.reduce((a,b)=>a+b,0)||1;
+  const verde="#2ec4a6";
+  let h=`<div></div>`+[...Array(24).keys()].map(i=>`<div style="${i===hTop?`color:${verde};font-weight:700`:""}">${i}h</div>`).join("");
+  V.calor.forEach((row,i)=>{h+=`<div style="${i===dTop?`color:${verde};font-weight:700`:""}">${dn[i]}</div>`+row.map((v,j)=>{const r=rank[i+"-"+j],a=(0.06+0.94*Math.sqrt(v/mx)).toFixed(3);
+    return `<div title="${dn[i]} ${j}h: ${usd(v,0)}${r?` · ${r}º maior`:""}" style="${r?`background:rgba(46,196,166,${Math.max(.55,+a)});color:#fff;font-weight:700;outline:1px solid ${verde}`:`background:rgba(255,77,79,${a})`}">${r||""}</div>`}).join("")});
   $("heat").innerHTML=h;
+  kpis("heat-top",[["Dia com mais volume",`<span class="up">${["Segunda","Terça","Quarta","Quinta","Sexta","Sábado","Domingo"][dTop]}</span>`,`${usd(porDia[dTop],0)} · ${nf(porDia[dTop]/tot*100,0)}% do volume`],
+    ["Hora com mais volume",`<span class="up">${hTop}h às ${hTop+1}h</span>`,`${usd(porHora[hTop],0)} · ${nf(porHora[hTop]/tot*100,0)}% do volume`]]
+    .concat(cel.slice(0,3).map((c,k)=>[`${k+1}º horário com mais volume`,`<span class="up">${dn[c.i]} ${c.j}h</span>`,`${usd(c.v,0)} · ${nf(c.v/tot*100,1)}% do volume`])));
 }
 function rCarteiras(){
   const C=D.carteiras,c=C.concentracao;
