@@ -618,7 +618,8 @@ function rFluxo(){
   const tot=vc+vv,n=nc+nv,dif=vc-vv;
   kpis("fluxo-kpis",[["Compras no período",usd(vc,0),`${nf(nc)} compras · ${nf(sc.size)} carteiras`],["Vendas no período",usd(vv,0),`${nf(nv)} vendas · ${nf(sv.size)} carteiras`],
     ["Diferença (compras − vendas)",`<span class="${dif>=0?"up":"dn"}">${dif>=0?"+":"−"}US$ ${nf(Math.abs(dif),0)}</span>`,dif>=0?"compradores na frente":"vendedores na frente"],
-    ["Pressão compradora",tot?nf(vc/tot*100,0)+"%":"—","parte do volume que foi compra"],["Volume total",usd(tot,0),`${nf(n)} negócios`],["Valor médio por negócio",usd(n?tot/n:0,0)],
+    (()=>{if(!tot)return ["Pressão","—","sem negociações no período"];const p=vc/tot*100;   // decidida pelo valor em US$, não pelo número de negócios
+      return Math.abs(p-50)<2.5?["Pressão","Equilibrada",`${nf(p,0)}% do valor em compras`]:p>50?["Pressão compradora",`<span class="up">${nf(p,0)}%</span>`,"do valor negociado foi compra"]:["Pressão vendedora",`<span class="dn">${nf(100-p,0)}%</span>`,"do valor negociado foi venda"]})(),["Volume total",usd(tot,0),`${nf(n)} negócios`],["Valor médio por negócio",usd(n?tot/n:0,0)],
     ["Taxa na compra",F.taxa_compra==null?"—":nf(F.taxa_compra*100,1)+"%"],["Taxa na venda",F.taxa_venda==null?"—":nf(F.taxa_venda*100,1)+"%"]]);
   seg($("fluxo-seg"),[["todas","Todas"],["compra","Só compras"],["venda","Só vendas"],["grandes","Só grandes (US$ 500+)"]],fluxoF,x=>{fluxoF=x;rFluxo()},"Mostrar");
   const obj=t=>({ts:t[0],lado:t[1]?"compra":"venda",tok:t[2],bnb:t[3],usd:t[4],preco:t[5],quem:t[6],tx:t[7],taxa:t[8],rotulo:F.rotulos[t[6]]||"",saldo:F.saldos[t[6]]||0});

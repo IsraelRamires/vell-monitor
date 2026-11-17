@@ -819,8 +819,17 @@ def build():
                            "ir": {"aba": "liquidez", "alvo": "tb-liqev"}})
     r24 = rolling(DAY)
     if r24["volume_usd"]:
-        ratio = r24["compra_usd"] / r24["volume_usd"] * 100
-        sinais.append({"tipo": "fluxo", "txt": f"Pressão compradora nas últimas 24h: {ratio:.0f}% do volume foi compra ({r24['n_compra']} compras x {r24['n_venda']} vendas).",
+        # a pressão é decidida pelo valor em US$ negociado, não pelo número de operações
+        pc_ = r24["compra_usd"] / r24["volume_usd"] * 100
+        pv_ = 100 - pc_
+        cont_ = f"US$ {br(r24['compra_usd'])} em {r24['n_compra']} compras x US$ {br(r24['venda_usd'])} em {r24['n_venda']} vendas"
+        if abs(pc_ - 50) < 2.5:
+            tipo_, txt_ = "fluxo", f"Compras e vendas equilibradas nas últimas 24h: {pc_:.0f}% do valor negociado foi compra ({cont_})."
+        elif pc_ > 50:
+            tipo_, txt_ = "compra", f"Pressão compradora nas últimas 24h: {pc_:.0f}% do valor negociado foi compra ({cont_})."
+        else:
+            tipo_, txt_ = "venda", f"Pressão vendedora nas últimas 24h: {pv_:.0f}% do valor negociado foi venda ({cont_})."
+        sinais.append({"tipo": tipo_, "txt": txt_,
                        "ir": {"aba": "fluxo", "alvo": "fluxo-kpis", "cfg": {"fluxoPer": "24h"}}})
 
     # ------------------------------------------------------------ leitura do mercado (placar de sinais)
