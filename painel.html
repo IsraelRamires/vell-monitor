@@ -832,7 +832,8 @@ function mostrarCarteira(a){
     <tr><td>Enviou por transferência</td><td class="n">${big(w.enviou)} VELL</td></tr>
     ${w.venda_sem_custo>0?`<tr><td>Vendas de VELL sem custo</td><td class="n">${usd(w.venda_sem_custo,0)} (fora do resultado das vendas)</td></tr>`:""}
     <tr><td>Primeira movimentação</td><td class="n">${dtm(w.primeira)}</td></tr>
-    <tr><td>Última movimentação</td><td class="n">${dtm(w.ultima)} (${ago(w.ultima)} atrás)</td></tr></tbody></table></div>`;
+    <tr><td>Última movimentação</td><td class="n">${dtm(w.ultima)} (${ago(w.ultima)} atrás)</td></tr>
+    <tr style="border-top:2px solid var(--line)"><td><b>Saldo total de lucro ou prejuízo</b><div class="mut" style="font-size:12px">vendas + valor do saldo atual − compras</div></td><td class="n"><b style="font-size:16px">${res(simples)}</b><div class="mut" style="font-size:12px">${usd(w.vendeu_usd,0)} + ${usd(valor,0)} − ${usd(w.comprou_usd,0)}${w.comprou_usd>0?` · ${pc(simples/w.comprou_usd*100,1)} sobre o que pagou`:""}</div></td></tr></tbody></table></div>`;
   const ops=(D.fluxo.todas||[]).filter(t=>t[6]===a).slice().reverse();
   h+=`<h2>Compras e vendas desta carteira</h2><div class="card scroll" id="tb-cc"></div>`;
   out.innerHTML=h;
