@@ -126,17 +126,29 @@ def fetch_logs(con, progress=None):
 
 
 # --------------------------------------------------------------------------- Preço do BNB
+# data-api.binance.vision é o espelho público de dados da Binance: funciona também de servidores
+# nos EUA (como os do GitHub), onde api.binance.com responde "451 - bloqueado".
+BINANCE_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com"]
+
+
+def binance_klines(sym, interval, start, limit=1000):
+    err = None
+    for host in BINANCE_HOSTS:
+        try:
+            return _get_json(f"{host}/api/v3/klines?symbol={sym}USDT&interval={interval}"
+                             f"&startTime={start * 1000}&limit={limit}")
+        except Exception as e:
+            err = e
+    raise err
+
+
 def fetch_bnb_prices(con):
     """Preço do BNB em dólar, de hora em hora (Binance), desde a criação do token."""
     last = con.execute("SELECT MAX(ts) FROM bnb_price").fetchone()[0]
     start = (last - 2 * 3600) if last else 1779840000   # 27/05/2026
     n = 0
     while True:
-        url = ("https://api.binance.com/api/v3/klines?symbol=BNBUSDT&interval=1h"
-               f"&startTime={start * 1000}&limit=1000")
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=30) as r:
-            k = json.load(r)
+        k = binance_klines("BNB", "1h", start)
         if not k:
             break
         con.executemany("INSERT INTO bnb_price(ts,close) VALUES(?,?) ON CONFLICT(ts) DO UPDATE SET close=excluded.close",
@@ -145,6 +157,33 @@ def fetch_bnb_prices(con):
         if len(k) < 1000:
             break
         start = k[-1][0] // 1000 + 3600
+    con.commit()
+    return n
+
+
+BNB_MINUTOS_DIAS = 40     # guarda o preço do BNB minuto a minuto só dos últimos 40 dias
+
+
+def fetch_bnb_minutes(con):
+    """Preço do BNB minuto a minuto: converte o preço do VELL para dólar no minuto exato
+    (as variações de 1h, 24h, 7 e 30 dias ficam iguais às do DexScreener)."""
+    con.execute("CREATE TABLE IF NOT EXISTS bnb_price_1m(ts INTEGER PRIMARY KEY, close REAL)")
+    agora = int(time.time())
+    limite = agora - BNB_MINUTOS_DIAS * 86400
+    last = con.execute("SELECT MAX(ts) FROM bnb_price_1m").fetchone()[0]
+    start = max(limite, (last - 120) if last else limite)
+    n = 0
+    while start < agora:
+        k = binance_klines("BNB", "1m", start)
+        if not k:
+            break
+        con.executemany("INSERT INTO bnb_price_1m(ts,close) VALUES(?,?) ON CONFLICT(ts) DO UPDATE SET close=excluded.close",
+                        [(x[0] // 1000, float(x[4])) for x in k])
+        n += len(k)
+        if len(k) < 1000:
+            break
+        start = k[-1][0] // 1000 + 60
+    con.execute("DELETE FROM bnb_price_1m WHERE ts < ?", (limite,))
     con.commit()
     return n
 
@@ -168,8 +207,7 @@ def fetch_token_prices(con):
             last = con.execute("SELECT MAX(ts) FROM token_price WHERE sym=?", (sym,)).fetchone()[0]
             start = (last - 2 * 3600) if last else first
             while True:
-                k = _get_json(f"https://api.binance.com/api/v3/klines?symbol={sym}USDT&interval=1h"
-                              f"&startTime={start * 1000}&limit=1000")
+                k = binance_klines(sym, "1h", start)
                 if not k:
                     break
                 con.executemany("INSERT INTO token_price VALUES(?,?,?) ON CONFLICT(sym,ts) DO UPDATE SET close=excluded.close",
@@ -249,6 +287,10 @@ def update(progress=None):
             fetch_bnb_prices(con)
         except Exception as e:
             log("aviso: preço do BNB não atualizou:", repr(e)[:100])
+        try:
+            fetch_bnb_minutes(con)
+        except Exception as e:
+            log("aviso: preço do BNB minuto a minuto não atualizou:", repr(e)[:100])
         fetch_token_prices(con)
         read_contract_state(con)
         meta_set(con, "last_update", int(time.time()))

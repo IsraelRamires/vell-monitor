@@ -29,7 +29,10 @@ PORT = int(os.environ.get("PORT") or 8765)          # endereço do painel: http:
 HOST = os.environ.get("VELL_HOST") or "127.0.0.1"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.environ.get("VELL_DB") or os.path.join(BASE_DIR, "dados", "vell.db")
-TZ_OFFSET_HOURS = -3                # horário de Brasília
+TZ_OFFSET_HOURS = -3                # horário de Brasília (para mostrar datas e horas)
+# Fechamento de cada dia (volume por dia, "hoje", candles diários): 00:00 UTC = 21:00 de Brasília,
+# o mesmo horário do candle diário do DexScreener e da Binance.
+FECHAMENTO_DIA_UTC = 0
 
 # Faixas de tamanho de carteira (em % do fornecimento total)
 WHALE_PCT = 1.0                     # baleia: 1% ou mais do supply

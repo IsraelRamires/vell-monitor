@@ -382,7 +382,8 @@ const usd=(n,d)=>n==null||isNaN(n)?"—":"US$ "+nf(n,d??(Math.abs(n)<1?(Math.abs
 const pc=(n,d=1)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${nf(n,d)}%</span>`;
 const sg=(n,f)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${f(n)}</span>`;
 const big=n=>n==null?"—":Math.abs(n)>=1e6?nf(n/1e6,2)+" mi":Math.abs(n)>=1e3?nf(n/1e3,1)+" mil":nf(n,0);
-const tz=()=> (D?.tz??-3)*3600;
+const tz=()=> (D?.tz??-3)*3600;   // fuso para mostrar datas e horas (Brasília)
+const dtz=()=> (D?.dia_tz??0)*3600;   // dias fecham às 21:00 de Brasília (00:00 UTC), como o candle diário do DexScreener
 const dtm=ts=>{if(!ts)return"—";const d=new Date((ts+tz())*1000);const p=x=>String(x).padStart(2,"0");return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
 const dia=s=>{const [y,m,d]=s.split("-");return d?`${d}/${m}`:(m?`${m}/${y}`:y)};
 const ago=ts=>{if(!ts)return"—";const s=Date.now()/1000-ts;return s<3600?Math.round(s/60)+" min":s<86400?Math.round(s/3600)+" h":Math.round(s/86400)+" d"};
@@ -405,11 +406,11 @@ function chart(id,cfg){if(charts[id])charts[id].destroy();const c=cfg;c.options=
   c.options.scales=c.options.scales||{};for(const k of ["x","y"]){c.options.scales[k]=Object.assign({grid:{color:"#22262e"},ticks:{color:"#9aa0aa",maxTicksLimit:k==="x"?10:7}},c.options.scales[k]||{})}
   charts[id]=new Chart($(id),c)}
 const line=(label,data,color,extra={})=>Object.assign({label,data,borderColor:color,backgroundColor:color,borderWidth:2,pointRadius:0,tension:.15},extra);
-const RNG={"24h":24,"7d":168,"30d":720,"tudo":1e9,"mensal":1e9,get mes(){const n=D.gerado_em,d=new Date((n+tz())*1000),ini=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)/1000-tz();return Math.max(2,Math.ceil((n-ini)/3600))},
-  get ano(){const n=D.gerado_em,d=new Date((n+tz())*1000),ini=Date.UTC(d.getUTCFullYear(),0,1)/1000-tz();return Math.max(2,Math.ceil((n-ini)/3600))}};
+const RNG={"24h":24,"7d":168,"30d":720,"tudo":1e9,"mensal":1e9,get mes(){const n=D.gerado_em,d=new Date((n+dtz())*1000),ini=Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),1)/1000-dtz();return Math.max(2,Math.ceil((n-ini)/3600))},
+  get ano(){const n=D.gerado_em,d=new Date((n+dtz())*1000),ini=Date.UTC(d.getUTCFullYear(),0,1)/1000-dtz();return Math.max(2,Math.ceil((n-ini)/3600))}};
 const PERIODOS=[["24h","24 horas"],["7d","7 dias"],["30d","30 dias"],["mes","Este mês"],["mensal","Mensal (um ponto por mês)"],["ano","Anual (este ano)"],["tudo","Desde o lançamento"]];
-const mesKey=ts=>{const d=new Date((ts+tz())*1000);return d.getUTCFullYear()*12+d.getUTCMonth()};
-const mesLbl=ts=>{const d=new Date((ts+tz())*1000);return ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][d.getUTCMonth()]+"/"+String(d.getUTCFullYear()).slice(2)};
+const mesKey=ts=>{const d=new Date((ts+dtz())*1000);return d.getUTCFullYear()*12+d.getUTCMonth()};
+const mesLbl=ts=>{const d=new Date((ts+dtz())*1000);return ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"][d.getUTCMonth()]+"/"+String(d.getUTCFullYear()).slice(2)};
 // horas do período; no "mensal" devolve só o último ponto de cada mês. h.idx guarda a posição de cada ponto em D.horas
 const hrs=k=>{const A=D.horas;if(k==="mensal"){const idx=[];A.forEach((x,i)=>{if(i===A.length-1||mesKey(A[i+1][0])!==mesKey(x[0]))idx.push(i)});const h=idx.map(i=>A[i]);h.idx=idx;h.mensal=true;return h}
   const n=Math.min(RNG[k]+1,A.length),h=A.slice(-n);h.idx=h.map((_,i)=>A.length-n+i);return h};
@@ -423,7 +424,7 @@ function velas(k,src){
   const n=Math.min(RNG[k],src.length),v=src.slice(-n),step=vela==="auto"?(n<=48?1:n<=200?4:24):+vela;
   if(step===1)return v;
   const out=[];let cur=null,key=null;
-  for(const x of v){const g=Math.floor((x[0]+tz())/(step*3600));if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
+  for(const x of v){const g=Math.floor((x[0]+dtz())/(step*3600));if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
   return out}
 function precoCfg(k,extraY={},S={}){
   const fm=S.fmt||(x=>usd(x,6)),tk=S.tick||(x=>nf(x,5)),cor=S.cor||"#ff4d4f";
@@ -445,7 +446,7 @@ function rGeral(){
   const r=D.resumo,v=D.volume.rolante["24h"],f=D.fluxo;
   kpis("kpis",[
    ["Preço",usd(r.preco,6),`${nf(r.preco_bnb*1e6,3)} milionésimos de BNB`],
-   ["Variação 1 hora",pc(r.var_1h,2)],["Variação 24 horas",pc(r.var_24h)],["Variação 7 dias",pc(r.var_7d)],["Variação 30 dias",pc(r.var_30d)],
+   ["Variação 1 hora",pc(r.var_1h,2)],["Variação 24 horas",pc(r.var_24h)],["Variação no dia",pc(r.var_dia,2),"desde o fechamento das 21:00"],["Variação 7 dias",pc(r.var_7d)],["Variação 30 dias",pc(r.var_30d)],
    ["Desde o lançamento",pc(r.var_lancamento),`começou em ${usd(r.preco_lancamento,5)}`],
    ["Valor de mercado",usd(r.valor_mercado,0),`${big(r.circulante)} VELL em circulação`],
    ["Liquidez no pool",usd(r.liquidez_usd,0),`${nf(r.liq_sobre_mcap,1)}% do valor de mercado`],
@@ -563,7 +564,7 @@ function rSth(){
   const lab=Z.map(x=>dia(x.dia));
   // estilo "linha fina + custo": preço de hora em hora e custo médio
   const porDia={};Z.forEach(x=>porDia[x.dia]=x.custo);
-  const diaDe=ts=>{const d=new Date((ts+tz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
+  const diaDe=ts=>{const d=new Date((ts+dtz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
   const HH=D.horas,cst=new Array(HH.length).fill(null);let pi=null;
   // o custo é calculado no fim de cada dia: liga um dia ao outro com uma reta, para a linha ficar suave
   HH.forEach((h,i)=>{const fim=i===HH.length-1||diaDe(HH[i+1][0])!==diaDe(h[0]),c=porDia[diaDe(h[0])];if(!fim||!c)return;
@@ -595,7 +596,7 @@ function rLth(){
     ["Vendas de longo prazo (7 dias)",usd(A.vendido7_usd,0),`${big(A.vendido7)} VELL vendidos no pool`],
     ["Resultado das vendas (7 dias)",A.sopr7==null?"—":`<span class="${A.sopr7>=1?"up":"dn"}">${nf(A.sopr7,2)}</span>`,A.sopr7==null?"sem vendas com custo conhecido":A.sopr7>=1?"vendem com lucro":`vendem com prejuízo de ${nf((1-A.sopr7)*100,0)}%`]]);
   const porDia={};Z.forEach(x=>porDia[x.dia]=x.custo);
-  const diaDe=ts=>{const d=new Date((ts+tz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
+  const diaDe=ts=>{const d=new Date((ts+dtz())*1000),q=n=>String(n).padStart(2,"0");return `${d.getUTCFullYear()}-${q(d.getUTCMonth()+1)}-${q(d.getUTCDate())}`};
   const HH=D.horas,cst=new Array(HH.length).fill(null);let pi=null;
   HH.forEach((h,i)=>{const fim=i===HH.length-1||diaDe(HH[i+1][0])!==diaDe(h[0]),c=porDia[diaDe(h[0])];if(!fim||!c)return;
     if(pi!=null){for(let j=pi+1;j<=i;j++)cst[j]=cst[pi]+(c-cst[pi])*(j-pi)/(i-pi)}else cst[i]=c;pi=i});

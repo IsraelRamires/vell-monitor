@@ -26,6 +26,15 @@ Precisa do Python 3.9 ou mais novo instalado (não precisa instalar mais nada) e
   impacto no preço por tamanho de ordem, dono do contrato.
 - **VELL x BNB** — quanto o VELL acompanha o BNB e qual é o movimento próprio dele.
 
+## Horários e cálculos (iguais aos do DexScreener)
+
+- **Variações de 1h, 24h, 7 e 30 dias:** preço de agora contra o preço no momento exato de
+  1h/24h/7/30 dias atrás, convertido para dólar pelo preço do BNB naquele minuto.
+- **Dia:** cada dia fecha às **21:00 de Brasília** (00:00 UTC), como o candle diário do
+  DexScreener e da Binance. Vale para volume por dia, "hoje", candles diários e "Variação no dia".
+  O dia "17/11", por exemplo, vai de 16/11 às 21:00 até 17/11 às 21:00.
+- Datas e horas mostradas no painel continuam no horário de Brasília.
+
 ## Arquivos
 
 | Arquivo | Para que serve |

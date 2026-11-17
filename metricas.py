@@ -27,7 +27,8 @@ KNOWN = {
     "0xae7e6cabad8d80f0b4e1c4dde2a5db7201ef1252": "Cofre Mudra (travado)",
 }
 BURN_ADDRS = {ZERO, DEAD}
-TZ = C.TZ_OFFSET_HOURS * 3600
+TZ = C.TZ_OFFSET_HOURS * 3600                       # fuso para mostrar datas e horas (Brasília)
+DTZ = -int(getattr(C, "FECHAMENTO_DIA_UTC", 0)) * 3600  # dias fecham às 00:00 UTC = 21:00 de Brasília
 DAY = 86400
 DUST = 1e-6
 
@@ -38,7 +39,8 @@ def words(data):
 
 
 def local_day(ts):
-    return (ts + TZ) // DAY
+    """Número do dia; cada dia vai das 21:00 às 21:00 de Brasília (00:00 a 00:00 UTC)."""
+    return (ts + DTZ) // DAY
 
 
 def day_str(d):
@@ -76,6 +78,12 @@ def build():
     meta = dict(con.execute("SELECT k, v FROM meta").fetchall())
     rows = con.execute("SELECT block, ts, tx, li, address, topic0, t1, t2, data FROM logs ORDER BY block, li").fetchall()
     bnb_rows = con.execute("SELECT ts, close FROM bnb_price ORDER BY ts").fetchall()
+    try:
+        bnb_min = con.execute("SELECT ts, close FROM bnb_price_1m ORDER BY ts").fetchall()
+    except sqlite3.OperationalError:
+        bnb_min = []
+    if bnb_min:      # minuto a minuto onde existe (últimos 40 dias); de hora em hora antes disso
+        bnb_rows = [r for r in bnb_rows if r[0] + 3600 <= bnb_min[0][0]] + bnb_min
     contracts = dict(con.execute("SELECT address, is_contract FROM addr_info").fetchall())
     try:
         tok_rows = con.execute("SELECT sym, ts, close FROM token_price ORDER BY sym, ts").fetchall()
@@ -236,7 +244,7 @@ def build():
             snap_day = d_now_
         while snap_day < d_now_:               # fecha os dias que terminaram
             if snap_day >= launch_day and cur_px:
-                sth_guarda(snap_day, (snap_day + 1) * DAY - TZ, cur_px)
+                sth_guarda(snap_day, (snap_day + 1) * DAY - DTZ, cur_px)
             snap_day += 1
         delta = defaultdict(float)
         for f, t, v in e["tr"]:
@@ -372,7 +380,7 @@ def build():
     hoje_ = local_day(now)
     while snap_day is not None and snap_day < hoje_:
         if snap_day >= launch_day and cur_px:
-            sth_guarda(snap_day, (snap_day + 1) * DAY - TZ, cur_px)
+            sth_guarda(snap_day, (snap_day + 1) * DAY - DTZ, cur_px)
         snap_day += 1
     sth, lth = {}, {}
     if cur_px:
@@ -427,19 +435,21 @@ def build():
                 cl = last[2] / last[1]
                 hours.append([h, cl, cl * b, b, 2 * last[2] * b, last[1], last[2], op * b, hi_ * b, lo_ * b])
     r_tok, r_bnb = (syncs[-1][1], syncs[-1][2]) if syncs else (0, 0)
-    bnb_now = bnb_px[-1] if bnb_px else 0
+    bnb_now = bnb_px[-1] if bnb_px else 0     # último preço do BNB (minuto atual)
     price_bnb = r_bnb / r_tok if r_tok else 0
     price = price_bnb * bnb_now
 
+    sync_ts = [s[0] for s in syncs]
+
     def price_at(ts_back):
-        """Preço (US$) no início da vela de 1 hora que contém o momento 'agora - ts_back'.
-        Mesma convenção do DexScreener: compara com a abertura da vela, não com o fechamento."""
-        if not hours:
+        """Preço (US$) no momento exato 'agora - ts_back': preço do pool naquele instante,
+        convertido pelo preço do BNB naquele minuto. É o mesmo cálculo do DexScreener."""
+        t = now - ts_back
+        k = bisect.bisect_right(sync_ts, t) - 1
+        if k < 0:
             return None
-        k = bisect.bisect_right([h[0] for h in hours], now - ts_back) - 1
-        if k >= 1:
-            return hours[k - 1][2]          # fechamento da vela anterior = preço no início desta
-        return hours[0][7] or hours[0][2]   # primeira vela: usa a abertura dela
+        s = syncs[k]
+        return s[2] / s[1] * bnb_usd(t) if s[1] else None
 
     # ------------------------------------------------------------ rótulos e tipos
     def label(a):
@@ -476,9 +486,9 @@ def build():
         return out
     d24, d7, d30 = window_delta(DAY), window_delta(7 * DAY), window_delta(30 * DAY)
     # início do mês e do ano atuais (no fuso do painel), em segundos atrás
-    _ld = dt.datetime.utcfromtimestamp(now + TZ)
-    sec_mes = now - (int((dt.datetime(_ld.year, _ld.month, 1) - dt.datetime(1970, 1, 1)).total_seconds()) - TZ)
-    sec_ano = now - (int((dt.datetime(_ld.year, 1, 1) - dt.datetime(1970, 1, 1)).total_seconds()) - TZ)
+    _ld = dt.datetime.utcfromtimestamp(now + DTZ)
+    sec_mes = now - (int((dt.datetime(_ld.year, _ld.month, 1) - dt.datetime(1970, 1, 1)).total_seconds()) - DTZ)
+    sec_ano = now - (int((dt.datetime(_ld.year, 1, 1) - dt.datetime(1970, 1, 1)).total_seconds()) - DTZ)
     dmes, dano, dtudo = window_delta(sec_mes), window_delta(sec_ano), window_delta(now)
 
     circulating = total_supply - sum(max(bal[a], 0) for a in BURN_ADDRS)
@@ -1098,12 +1108,16 @@ def build():
                        "ir": {"aba": "carteiras", "alvo": "c-hold"}})
 
     # 4) movimento próprio do VELL contra o mercado
-    R24 = (rel or {}).get("24h")
-    if R24 and R24.get("vell_usd") is not None and R24.get("bnb_usd") is not None and R24.get("vell_bnb") is not None:
+    # mesmo cálculo do cartão "Variação 24 horas": momento exato de 24h atrás, BNB do minuto
+    k24 = bisect.bisect_right(sync_ts, now - DAY) - 1
+    bnb24 = bnb_usd(now - DAY)
+    if k24 >= 0 and syncs[k24][1] and bnb24 and price_bnb:
+        v_usd = chg(DAY)
+        v_bnb = pct(bnb_now, bnb24)
+        vb = pct(price_bnb, syncs[k24][2] / syncs[k24][1])
         btc_ = ((rel_all.get("BTC") or {}).get("24h") or {}).get("bnb_usd")
-        vb = R24["vell_bnb"]
-        txt = f"Em 24h o VELL variou {pcs(R24['vell_usd'])} e o BNB {pcs(R24['bnb_usd'])}" + (f" (BTC {pcs(btc_)})" if btc_ is not None else "") + ". "
-        if abs(vb) >= abs(R24["bnb_usd"]):
+        txt = f"Em 24h o VELL variou {pcs(v_usd)} e o BNB {pcs(v_bnb)}" + (f" (BTC {pcs(btc_)})" if btc_ is not None else "") + ". "
+        if abs(vb) >= abs(v_bnb):
             txt += f"A maior parte do movimento veio do próprio VELL ({pcs(vb)} medido em BNB), não do mercado."
         else:
             txt += f"O VELL acompanhou mais o mercado do que se moveu sozinho ({pcs(vb)} medido em BNB)."
@@ -1118,11 +1132,11 @@ def build():
         ant_ = ser_[-8:-1]
         media_ = sum((x.get("vendido_usd") or 0.0) for x in ant_) / len(ant_) if ant_ else 0.0
         if media_ > 0 and hoje_v >= 2 * media_ and hoje_v >= 50:
-            sinais.append({"tipo": "venda", "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} hoje, "
+            sinais.append({"tipo": "venda", "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} desde as 21:00, "
                                                    f"{fn(hoje_v / media_, 1)}x a média diária dos últimos 7 dias (US$ {br(media_)}).", "ir": IR_LTH})
         elif hoje_v > 0 or media_ > 0:
             sinais.append({"tipo": "venda" if hoje_v > media_ else "compra",
-                           "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} hoje "
+                           "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} desde as 21:00 "
                                   f"(média diária dos últimos 7 dias: US$ {br(media_)}).", "ir": IR_LTH})
 
     def trade_out(t):
@@ -1133,10 +1147,12 @@ def build():
 
     out = {
         "gerado_em": now, "ultima_coleta": int(meta.get("last_update") or 0), "ultimo_bloco": int(meta.get("last_block") or 0),
-        "simbolo": C.SYMBOL, "token": C.TOKEN, "par": C.PAIR, "tz": C.TZ_OFFSET_HOURS, "lancamento": launch,
+        "simbolo": C.SYMBOL, "token": C.TOKEN, "par": C.PAIR, "tz": C.TZ_OFFSET_HOURS, "dia_tz": DTZ // 3600, "lancamento": launch,
         "resumo": {
             "preco": price, "preco_bnb": price_bnb, "bnb_usd": bnb_now,
             "var_1h": chg(3600), "var_24h": chg(DAY), "var_7d": chg(7 * DAY), "var_30d": chg(30 * DAY),
+            "var_dia": chg(now - (local_day(now) * DAY - DTZ)),   # desde o último fechamento (21:00 de Brasília)
+            "fechamento_dia": local_day(now) * DAY - DTZ,
             "var_lancamento": pct(price, trades[0]["preco_usd"]) if trades else None,
             "preco_lancamento": trades[0]["preco_usd"] if trades else None,
             "valor_mercado": price * circulating, "fdv": price * total_supply,
