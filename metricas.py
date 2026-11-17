@@ -665,8 +665,9 @@ def build():
         k = "compra" if t["lado"] == "compra" else "venda"
         d[k + "_usd"] += t["usd"]; d["bnb"] += t["bnb"]; d["tok"] += t["tok"]; d["n_" + k] += 1
         d["compradores" if k == "compra" else "vendedores"].add(t["who"])
-        lt = dt.datetime.utcfromtimestamp(t["ts"] + TZ)
-        heat[lt.weekday()][lt.hour] += t["usd"]
+        if t["ts"] >= now - 30 * DAY:          # mapa de dia e hora: só os últimos 30 dias (padrão atual)
+            lt = dt.datetime.utcfromtimestamp(t["ts"] + TZ)
+            heat[lt.weekday()][lt.hour] += t["usd"]
 
     def finish(key, a):
         tot = a["compra_usd"] + a["venda_usd"]
