@@ -1215,7 +1215,7 @@ def build():
         "usd_na_hora": sum(b[2] * (b[4] or 0) for b in burns), "carteiras": len(q_quem),
         "primeira": burns[0][0] if burns else None, "ultima": burns[-1][0] if burns else None,
         "automatica": q_auto, "manual": q_total - q_auto,
-        "24h": q_janela(DAY), "7d": q7, "30d": q30,
+        "24h": q_janela(DAY), "7d": q7, "30d": q30, "365d": q_janela(365 * DAY), "tudo": q_janela(now),
         "ritmo_dia": ritmo_, "proj_ano_pct": ritmo_ * 365 / total_supply * 100,
         "saldo_morto": max(bal.get(DEAD, 0.0), 0.0), "saldo_zero": max(bal.get(ZERO, 0.0), 0.0),
         "serie": q_serie,

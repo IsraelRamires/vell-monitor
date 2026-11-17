@@ -855,8 +855,8 @@ function rQueimas(){
     ["Por contratos (automática)",nf(Q.automatica/Q.total*100,1)+"%",`${big(Q.automatica)} VELL`],
     ["Por carteiras e outros",nf(Q.manual/Q.total*100,1)+"%",`${big(Q.manual)} VELL`],
     ["Última queima",ago(Q.ultima)+" atrás",dtm(Q.ultima)]]);
-  const P=[["24h","Últimas 24 horas"],["7d","Últimos 7 dias"],["30d","Últimos 30 dias"]];
-  kpis("qm-per",P.map(([k,n])=>{const x=Q[k];return [n,big(x.qtd)+" VELL",`${usd(x.usd,x.usd<100?2:0)} · ${nf(x.n)} queimas · ${pq(x.pct)}`]}));
+  const P=[["24h","Últimas 24 horas"],["7d","Últimos 7 dias"],["30d","Últimos 30 dias"],["365d","Últimos 365 dias"],["tudo","Desde o lançamento"]];
+  kpis("qm-per",P.filter(([k])=>Q[k]).map(([k,n])=>{const x=Q[k];return [n,big(x.qtd)+" VELL",`${usd(x.usd,x.usd<100?2:0)} · ${nf(x.n)} queimas · ${pq(x.pct)}`]}));
   seg($("qm-seg"),[["7d","7 dias"],["30d","30 dias"],["90d","90 dias"],["tudo","Desde a primeira queima"]],qmPer,v=>{qmPer=v;localStorage.setItem("vell_qmper",v);rQueimas()},"Período");
   $("qm-seg").insertAdjacentHTML("beforeend",selHtml("Mostrar",[["qtd","VELL queimados"],["usd","Valor em US$ (na hora)"],["n","Número de queimas"]],qmMed,"qmmed"));
   $("qm-seg").querySelector('[data-k="qmmed"]').onchange=e=>{qmMed=e.target.value;localStorage.setItem("vell_qmmed",qmMed);rQueimas()};
