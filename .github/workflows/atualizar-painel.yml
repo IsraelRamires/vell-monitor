@@ -24,7 +24,7 @@ concurrency:
 jobs:
   atualizar:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     environment:
       name: github-pages
       url: ${{ steps.publicar.outputs.page_url }}
@@ -81,3 +81,20 @@ jobs:
       - name: Publicar
         id: publicar
         uses: actions/deploy-pages@v4
+
+      # O agendador do GitHub (schedule) atrasa muito ou não roda em repositórios novos.
+      # Por isso cada atualização agenda a próxima: espera ~9 minutos e dispara de novo.
+      # Se já houver outra atualização na fila, não dispara (evita duas correntes ao mesmo tempo).
+      - name: Agendar a próxima atualização
+        if: always() && !cancelled()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 540
+          fila=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow atualizar-painel.yml --json databaseId,status                  --jq "[.[] | select(.databaseId != ${GITHUB_RUN_ID} and (.status == \"queued\" or .status == \"pending\" or .status == \"waiting\" or .status == \"in_progress\" or .status == \"requested\"))] | length")
+          if [ "${fila:-0}" = "0" ]; then
+            gh workflow run atualizar-painel.yml --repo "$GITHUB_REPOSITORY" --ref main
+            echo "Próxima atualização disparada."
+          else
+            echo "Já existe outra atualização na fila; não disparei outra."
+          fi
