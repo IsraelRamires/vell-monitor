@@ -194,7 +194,7 @@ header #status{margin-left:0}
   <p class="exp">Acompanha os VELL que estão parados há mais tempo nas carteiras: quanto são, quanto custaram e quanto disso está sendo vendido. Quando quem segura há muito tempo começa a vender, a oferta no mercado aumenta.</p>
   <div class="card ajuda-txt" id="lth-ajuda" style="display:none">
     <h4>O que é um holder de longo prazo</h4>
-    <p>É o contrário do curto prazo: um lote de VELL passa a ser de longo prazo quando fica mais tempo na mesma carteira do que o limite escolhido no menu (7 ou 30 dias). Curto e longo prazo somados dão 100% dos VELL em carteiras.</p>
+    <p>É o contrário do curto prazo: um lote de VELL passa a ser de longo prazo quando fica mais tempo na mesma carteira do que o limite escolhido no menu (7 dias, 30 dias, 6 meses ou 12 meses). Em "desde o lançamento" contam só os VELL que já estavam na carteira antes de as negociações começarem (07/10/2026) e nunca saíram dela. Curto e longo prazo somados dão 100% dos VELL em carteiras.</p>
     <h4>As medidas</h4>
     <ul>
       <li><b>VELL em mãos de longo prazo:</b> a soma dos lotes antigos. Cresce quando os lotes recentes envelhecem sem serem vendidos; diminui quando holders antigos vendem ou transferem.</li>
@@ -204,7 +204,7 @@ header #status{margin-left:0}
       <li><b>Resultado das vendas (SOPR):</b> valor recebido dividido pelo custo, só para lotes com custo conhecido. Abaixo de 1,00 vendem com prejuízo. Já desconta a taxa de venda do contrato.</li>
     </ul>
     <h4>Limites</h4>
-    <ul><li>No Bitcoin, longo prazo significa mais de 155 dias. O VELL tem poucas semanas, por isso os limites aqui são curtos.</li>
+    <ul><li>No Bitcoin, longo prazo significa mais de 155 dias. O VELL tem poucas semanas de negociação, por isso 7 e 30 dias são os limites mais úteis hoje. Os de 6 e 12 meses só passam a ter VELL quando os primeiros lotes completarem essa idade (o contrato foi criado em 27/05/2026).</li>
     <li>Transferir VELL para outra carteira zera a idade do lote: ele volta a contar como curto prazo na carteira de destino.</li>
     <li>O pool, o contrato, os cofres de bloqueio, a queima e as carteiras do dono e do criador ficam de fora.</li></ul>
   </div>
@@ -580,10 +580,10 @@ function rSth(){
 }
 function ajudaLth(){const e=$("lth-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("lth-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
 function rLth(){
-  const S=D.lth||{},nomes={"7d":"7 dias","30d":"30 dias"},ks=Object.keys(nomes).filter(k=>S[k]);
+  const S=D.lth||{},nomes={"7d":"mais de 7 dias","30d":"mais de 30 dias","180d":"mais de 6 meses","365d":"mais de 12 meses","tudo":"desde o lançamento"},ks=Object.keys(nomes).filter(k=>S[k]);
   if(!ks.length){$("lth-kpis").innerHTML='<div class="mut">Sem dados suficientes para este indicador.</div>';return}
-  if(!nomes[lthK]||!S[lthK])lthK=ks[ks.length-1];
-  seg($("lth-seg"),ks.map(k=>[k,"mais de "+nomes[k]]),lthK,v=>{lthK=v;localStorage.setItem("vell_lth",v);rLth()},"Longo prazo = VELL parado há");
+  if(!nomes[lthK]||!S[lthK])lthK="30d";
+  seg($("lth-seg"),ks.map(k=>[k,nomes[k]]),lthK,v=>{lthK=v;localStorage.setItem("vell_lth",v);rLth()},"Longo prazo = VELL parado há");
   const A=S[lthK].agora,Z=S[lthK].serie,dif=A.mvrv==null?null:(A.mvrv-1)*100;
   kpis("lth-kpis",[
     ["VELL em mãos de longo prazo",big(A.qtd),`${nf(A.pct,2)}% dos VELL em carteiras · ${usd(A.valor_usd,0)}`],

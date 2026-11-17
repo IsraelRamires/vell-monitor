@@ -179,7 +179,12 @@ def build():
     dist_hubs = {a for a in (owner, deployer) if a}
     # --- Short-Term Holders: cada carteira guarda "lotes" [quando recebeu, quantidade, preço de custo]
     lots = defaultdict(deque)
-    STH_THR = {"1d": DAY, "7d": 7 * DAY, "30d": 30 * DAY}
+    # limites de idade de um lote; "tudo" = recebido antes do lançamento e nunca movido desde então
+    STH_THR = {"1d": DAY, "7d": 7 * DAY, "30d": 30 * DAY, "180d": 180 * DAY, "365d": 365 * DAY, "tudo": None}
+
+    def lim_de(k, t):
+        lim = STH_THR[k]
+        return lim if lim is not None else t - C.LAUNCH_TS
     sth_serie = {k: [] for k in STH_THR}
     sth_venda = {k: defaultdict(lambda: [0.0, 0.0, 0.0]) for k in STH_THR}   # por dia: [valor vendido, custo, quantidade]
     # Long-Term Holders: os mesmos lotes, olhando os que têm MAIS idade que o limite
@@ -200,8 +205,8 @@ def build():
             for lt in dq:
                 total += lt[1]
                 idade = ts_fim - lt[0]
-                for k, lim in STH_THR.items():
-                    novo_ = idade < lim
+                for k in STH_THR:
+                    novo_ = idade < lim_de(k, ts_fim)
                     r_ = res[k] if novo_ else resl[k]
                     r_["qtd"] += lt[1]
                     if lt[1] > DUST:
@@ -330,8 +335,8 @@ def build():
                         uv = min(usa, resta_v)
                         if uv > 0 and pv_:
                             idade = ts - lt[0]
-                            for k_, lim_ in STH_THR.items():
-                                if idade < lim_:
+                            for k_ in STH_THR:
+                                if idade < lim_de(k_, ts):
                                     if lt[2]:
                                         acc_ = sth_venda[k_][d_now_]
                                         acc_[0] += uv * pv_; acc_[1] += uv * lt[2]; acc_[2] += uv
