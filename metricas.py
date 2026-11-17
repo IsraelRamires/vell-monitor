@@ -191,6 +191,18 @@ def build():
     # Long-Term Holders: os mesmos lotes, olhando os que têm MAIS idade que o limite
     lth_serie = {k: [] for k in STH_THR}
     lth_venda = {k: defaultdict(lambda: [0.0, 0.0, 0.0, 0.0]) for k in STH_THR}   # por dia: [valor c/ custo, custo, quantidade, valor total]
+    # cada venda, com o horário exato, para somar janelas corridas (últimas 24h, últimos 7 dias):
+    # (quando, valor c/ custo, custo, quantidade, valor total)
+    sth_ev = {k: [] for k in STH_THR}
+    lth_ev = {k: [] for k in STH_THR}
+
+    def janela_ev(evs, ini, fim):
+        """Soma as vendas entre 'ini' e 'fim': [valor c/ custo, custo, quantidade, valor total]."""
+        s_ = [0.0, 0.0, 0.0, 0.0]
+        for x in evs:
+            if ini <= x[0] < fim:
+                s_[0] += x[1]; s_[1] += x[2]; s_[2] += x[3]; s_[3] += x[4]
+        return s_
     cur_px = None                      # preço de mercado em dólar no momento da transação
     snap_day = None
     launch_day = local_day(C.LAUNCH_TS)
@@ -343,11 +355,13 @@ def build():
                                     if lt[2]:
                                         acc_ = sth_venda[k_][d_now_]
                                         acc_[0] += uv * pv_; acc_[1] += uv * lt[2]; acc_[2] += uv
+                                        sth_ev[k_].append((ts, uv * pv_, uv * lt[2], uv, uv * pv_))
                                 else:
                                     acc_ = lth_venda[k_][d_now_]
                                     acc_[2] += uv; acc_[3] += uv * pv_
                                     if lt[2]:
                                         acc_[0] += uv * pv_; acc_[1] += uv * lt[2]
+                                    lth_ev[k_].append((ts, uv * pv_ if lt[2] else 0.0, uv * lt[2] if lt[2] else 0.0, uv, uv * pv_))
                         resta_v -= uv
                         lt[1] -= usa; falta -= usa
                         if lt[1] <= 1e-12:
@@ -395,9 +409,8 @@ def build():
         res_now, total_now = sth_guarda(hoje_, now, cur_px)
         for k, r_ in res_now.items():
             custo_med = r_["custo"] / r_["qtd_custo"] if r_["qtd_custo"] else None
-            ult7 = [sth_venda[k][dd] for dd in range(hoje_ - 6, hoje_ + 1) if dd in sth_venda[k]]
-            v7, c7 = sum(x[0] for x in ult7), sum(x[1] for x in ult7)
-            sth[k] = {"agora": {"qtd": r_["qtd"], "pct": r_["qtd"] / total_now * 100 if total_now else 0, "total": total_now,
+            v7, c7 = janela_ev(sth_ev[k], now - 7 * DAY, now + 1)[:2]   # últimos 7 dias corridos (7 x 24h)
+            sth[k] ={"agora": {"qtd": r_["qtd"], "pct": r_["qtd"] / total_now * 100 if total_now else 0, "total": total_now,
                                 "longo": total_now - r_["qtd"], "carteiras": r_["cart"], "custo": custo_med,
                                 "mvrv": cur_px / custo_med if custo_med else None,
                                 "pct_lucro": r_["lucro"] / r_["qtd_custo"] * 100 if r_["qtd_custo"] else None,
@@ -407,8 +420,8 @@ def build():
         lth = {}
         for k, r_ in sth_foto.longo.items():
             custo_med = r_["custo"] / r_["qtd_custo"] if r_["qtd_custo"] else None
-            ult7 = [lth_venda[k][dd] for dd in range(hoje_ - 6, hoje_ + 1) if dd in lth_venda[k]]
-            v7, c7 = sum(x[0] for x in ult7), sum(x[1] for x in ult7)
+            j7 = janela_ev(lth_ev[k], now - 7 * DAY, now + 1)   # últimos 7 dias corridos (7 x 24h)
+            v7, c7 = j7[0], j7[1]
             ser = lth_serie[k]
             ant = next((x for x in reversed(ser[:-7]) ), None) if len(ser) > 7 else None
             lth[k] = {"agora": {"qtd": r_["qtd"], "pct": r_["qtd"] / total_now * 100 if total_now else 0, "total": total_now,
@@ -418,7 +431,9 @@ def build():
                                 "pct_lucro": r_["lucro"] / r_["qtd_custo"] * 100 if r_["qtd_custo"] else None,
                                 "resultado_usd": r_["qtd_custo"] * cur_px - r_["custo"] if r_["qtd_custo"] else None,
                                 "valor_usd": r_["qtd"] * cur_px, "sopr7": v7 / c7 if c7 > 0 else None,
-                                "vendido7": sum(x[2] for x in ult7), "vendido7_usd": sum(x[3] for x in ult7),
+                                "vendido7": j7[2], "vendido7_usd": j7[3],
+                                "vendido24_usd": janela_ev(lth_ev[k], now - DAY, now + 1)[3],
+                                "media_dia_ant_usd": janela_ev(lth_ev[k], now - 8 * DAY, now - DAY)[3] / 7,
                                 "var7": r_["qtd"] - ant["qtd"] if ant else None, "preco": cur_px},
                       "serie": ser}
 
@@ -1134,18 +1149,17 @@ def build():
     # 5) vendas de holders de longo prazo (VELL parado há mais de 7 dias)
     L7 = lth.get("7d")
     IR_LTH = {"aba": "leitura", "alvo": "lth-kpis", "cfg": {"lthK": "7d"}}
-    if L7 and L7["serie"]:
-        ser_ = L7["serie"]
-        hoje_v = ser_[-1].get("vendido_usd") or 0.0
-        ant_ = ser_[-8:-1]
-        media_ = sum((x.get("vendido_usd") or 0.0) for x in ant_) / len(ant_) if ant_ else 0.0
+    if L7:
+        # últimas 24h corridas x média por dia dos 7 dias anteriores a elas
+        hoje_v = L7["agora"]["vendido24_usd"]
+        media_ = L7["agora"]["media_dia_ant_usd"]
         if media_ > 0 and hoje_v >= 2 * media_ and hoje_v >= 50:
-            sinais.append({"tipo": "venda", "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} desde as 21:00, "
-                                                   f"{fn(hoje_v / media_, 1)}x a média diária dos últimos 7 dias (US$ {br(media_)}).", "ir": IR_LTH})
+            sinais.append({"tipo": "venda", "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} nas últimas 24h, "
+                                                   f"{fn(hoje_v / media_, 1)}x a média diária dos 7 dias anteriores (US$ {br(media_)}).", "ir": IR_LTH})
         elif hoje_v > 0 or media_ > 0:
             sinais.append({"tipo": "venda" if hoje_v > media_ else "compra",
-                           "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} desde as 21:00 "
-                                  f"(média diária dos últimos 7 dias: US$ {br(media_)}).", "ir": IR_LTH})
+                           "txt": f"Holders de longo prazo (VELL parado há mais de 7 dias) venderam US$ {br(hoje_v)} nas últimas 24h "
+                                  f"(média diária dos 7 dias anteriores: US$ {br(media_)}).", "ir": IR_LTH})
 
     # ------------------------------------------------------------ queimas (VELL enviado ao endereço morto/zero)
     def q_janela(sec):
@@ -1171,13 +1185,12 @@ def build():
     q_auto = sum(w_["qtd"] for w_ in q_quem.values() if w_["tipo"] == "contrato")
     q7, q30 = q_janela(7 * DAY), q_janela(30 * DAY)
     ritmo_ = q30["qtd"] / min(30.0, max(1.0, (now - burns[0][0]) / DAY)) if burns else 0.0
-    inicio_dia_ = local_day(now) * DAY - DTZ
     queimas = {
         "total": q_total, "pct": q_total / total_supply * 100, "n": len(burns), "usd_agora": q_total * price,
         "usd_na_hora": sum(b[2] * (b[4] or 0) for b in burns), "carteiras": len(q_quem),
         "primeira": burns[0][0] if burns else None, "ultima": burns[-1][0] if burns else None,
         "automatica": q_auto, "manual": q_total - q_auto,
-        "dia": q_janela(now - inicio_dia_), "24h": q_janela(DAY), "7d": q7, "30d": q30,
+        "24h": q_janela(DAY), "7d": q7, "30d": q30,
         "ritmo_dia": ritmo_, "proj_ano_pct": ritmo_ * 365 / total_supply * 100,
         "saldo_morto": max(bal.get(DEAD, 0.0), 0.0), "saldo_zero": max(bal.get(ZERO, 0.0), 0.0),
         "serie": q_serie,
@@ -1204,8 +1217,6 @@ def build():
         "resumo": {
             "preco": price, "preco_bnb": price_bnb, "bnb_usd": bnb_now,
             "var_1h": chg(3600), "var_24h": chg(DAY), "var_7d": chg(7 * DAY), "var_30d": chg(30 * DAY),
-            "var_dia": chg(now - (local_day(now) * DAY - DTZ)),   # desde o último fechamento (21:00 de Brasília)
-            "fechamento_dia": local_day(now) * DAY - DTZ,
             "var_lancamento": pct(price, trades[0]["preco_usd"]) if trades else None,
             "preco_lancamento": trades[0]["preco_usd"] if trades else None,
             "valor_mercado": price * circulating, "fdv": price * total_supply,

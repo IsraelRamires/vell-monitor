@@ -333,7 +333,7 @@ header #status{margin-left:0}
     <ul><li><b>Total queimado:</b> quanto do fornecimento já foi destruído.</li>
     <li><b>Ritmo:</b> média diária dos últimos 30 dias. A projeção anual mostra quanto do fornecimento sairia de circulação em um ano se esse ritmo continuar.</li>
     <li><b>Valor na hora:</b> quanto valiam os VELL queimados no momento da queima. <b>Valor hoje:</b> quanto valeriam pelo preço atual.</li></ul>
-    <p>Os dias fecham às 21:00 (horário de Brasília), como no restante do painel.</p>
+    <p>Os totais por período (24 horas, 7 dias, 30 dias) contam horas corridas até agora. No gráfico por dia, cada barra vai das 21:00 às 21:00 (horário de Brasília).</p>
   </div>
   <div class="grid" id="qm-kpis"></div>
   <h2>Queimas por período</h2>
@@ -481,7 +481,7 @@ function rGeral(){
   const r=D.resumo,v=D.volume.rolante["24h"],f=D.fluxo;
   kpis("kpis",[
    ["Preço",usd(r.preco,6),`${nf(r.preco_bnb*1e6,3)} milionésimos de BNB`],
-   ["Variação 1 hora",pc(r.var_1h,2)],["Variação 24 horas",pc(r.var_24h)],["Variação no dia",pc(r.var_dia,2),"desde o fechamento das 21:00"],["Variação 7 dias",pc(r.var_7d)],["Variação 30 dias",pc(r.var_30d)],
+   ["Variação 1 hora",pc(r.var_1h,2)],["Variação 24 horas",pc(r.var_24h)],["Variação 7 dias",pc(r.var_7d)],["Variação 30 dias",pc(r.var_30d)],
    ["Desde o lançamento",pc(r.var_lancamento),`começou em ${usd(r.preco_lancamento,5)}`],
    ["Valor de mercado",usd(r.valor_mercado,0),`${big(r.circulante)} VELL em circulação`],
    ["Liquidez no pool",usd(r.liquidez_usd,0),`${nf(r.liq_sobre_mcap,1)}% do valor de mercado`],
@@ -784,7 +784,7 @@ function rQueimas(){
     ["Por contratos (automática)",nf(Q.automatica/Q.total*100,1)+"%",`${big(Q.automatica)} VELL`],
     ["Por carteiras e outros",nf(Q.manual/Q.total*100,1)+"%",`${big(Q.manual)} VELL`],
     ["Última queima",ago(Q.ultima)+" atrás",dtm(Q.ultima)]]);
-  const P=[["dia","Hoje (desde as 21:00)"],["24h","Últimas 24 horas"],["7d","Últimos 7 dias"],["30d","Últimos 30 dias"]];
+  const P=[["24h","Últimas 24 horas"],["7d","Últimos 7 dias"],["30d","Últimos 30 dias"]];
   kpis("qm-per",P.map(([k,n])=>{const x=Q[k];return [n,big(x.qtd)+" VELL",`${usd(x.usd,x.usd<100?2:0)} · ${nf(x.n)} queimas · ${pq(x.pct)}`]}));
   seg($("qm-seg"),[["7d","7 dias"],["30d","30 dias"],["90d","90 dias"],["tudo","Desde a primeira queima"]],qmPer,v=>{qmPer=v;localStorage.setItem("vell_qmper",v);rQueimas()},"Período");
   $("qm-seg").insertAdjacentHTML("beforeend",selHtml("Mostrar",[["qtd","VELL queimados"],["usd","Valor em US$ (na hora)"],["n","Número de queimas"]],qmMed,"qmmed"));
