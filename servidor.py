@@ -52,6 +52,7 @@ def loop():
             if after != before:
                 recompute()
             STATE.update(status="ok", detalhe="", erro="")
+            coletor.log("dados atualizados")
         except Exception as e:
             STATE.update(status="erro", erro=repr(e)[:300])
             coletor.log("erro na atualização:", repr(e)[:300])
@@ -119,7 +120,12 @@ if __name__ == "__main__":
         coletor.log(f"Painel do VELL no ar: escutando em {C.HOST}:{C.PORT}  (banco em {C.DB_PATH})")
     if local and not os.environ.get("VELL_SEM_NAVEGADOR"):
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
+    import atexit
+    atexit.register(lambda: coletor.log("monitor encerrado"))
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         pass
+    except Exception as e:
+        coletor.log("o servidor parou por erro:", repr(e)[:300])
+        raise

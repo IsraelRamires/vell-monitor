@@ -13,6 +13,15 @@ UA = {"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"}
 
 def log(*a):
     print(time.strftime("[%H:%M:%S]"), *a, flush=True)
+    # também guarda num arquivo (dados/monitor.log) para descobrir por que o monitor parou, se parar
+    try:
+        arq = os.path.join(os.path.dirname(C.DB_PATH), "monitor.log")
+        if os.path.exists(arq) and os.path.getsize(arq) > 2_000_000:
+            os.replace(arq, arq + ".old")
+        with open(arq, "a", encoding="utf-8") as f:
+            f.write(time.strftime("[%d/%m %H:%M:%S] ") + " ".join(str(x) for x in a) + chr(10))
+    except Exception:
+        pass
 
 
 # --------------------------------------------------------------------------- RPC
