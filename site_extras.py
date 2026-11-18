@@ -40,7 +40,7 @@ RODAPE = """<footer class="rodape">
 
 CSS_RODAPE = """.rodape{border-top:1px solid #262a33;margin-top:30px;padding:18px 20px 26px;color:#9aa0aa;font-size:12.5px;text-align:center}
 .rodape nav{display:block;border:0;padding:0;margin-bottom:6px}.rodape a{color:#9db4ff}
-.rodape p{max-width:820px;margin:0 auto}.rodape .autoria{margin:10px auto 0;width:fit-content;font-weight:700;letter-spacing:.3px;background:linear-gradient(180deg,#fff6d5 0%,#f6dc8a 28%,#d4af37 55%,#a87d1e 78%,#e8c766 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.rodape p{max-width:820px;margin:0 auto}.rodape .autoria{margin:10px auto 0;width:fit-content;font-weight:700;letter-spacing:.3px;color:#6b4f26}
 #cookies{position:fixed;left:12px;right:12px;bottom:12px;z-index:30;display:none;gap:12px;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto;background:#171a21;border:1px solid #4a5060;border-radius:12px;padding:12px 14px;font-size:13px;color:#c8ccd4;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 #cookies.on{display:flex}#cookies span{flex:1 1 300px}#cookies a{color:#9db4ff}
 #cookies button{background:#2ec4a6;color:#0f1115;border:0;border-radius:8px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer}"""
