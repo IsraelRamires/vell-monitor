@@ -17,7 +17,7 @@ import json, os, shutil, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vellcfg as C
-import coletor, metricas
+import coletor, metricas, site_extras
 
 
 def dump(obj):
@@ -62,7 +62,13 @@ def main(saida):
               "intervalo": int(os.environ.get("VELL_INTERVALO_SITE") or 600)}
     with open(os.path.join(saida, "api", "status"), "wb") as f:
         f.write(dump(status))
-    shutil.copyfile(os.path.join(C.BASE_DIR, "painel.html"), os.path.join(saida, "index.html"))
+    with open(os.path.join(C.BASE_DIR, "painel.html"), encoding="utf-8") as f:
+        painel = site_extras.montar_painel(f.read())
+    with open(os.path.join(saida, "index.html"), "w", encoding="utf-8") as f:
+        f.write(painel)
+    for nome, conteudo in site_extras.paginas().items():      # sobre, privacidade, termos, contato, sitemap, robots, ads.txt
+        with open(os.path.join(saida, nome), "w", encoding="utf-8") as f:
+            f.write(conteudo)
     shutil.copyfile(os.path.join(C.BASE_DIR, "logo.jpg"), os.path.join(saida, "logo.jpg"))
     open(os.path.join(saida, ".nojekyll"), "w").close()
     coletor.log(f"Site gerado em {saida} ({len(data.get('fluxo', {}).get('todas', []))} negociações)")

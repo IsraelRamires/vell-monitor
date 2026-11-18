@@ -7,7 +7,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import vellcfg as C
-import coletor, metricas
+import coletor, metricas, site_extras
 
 STATE = {"json": b'{"vazio": true}', "carteiras": b'{"c": {}}', "status": "iniciando", "detalhe": "", "erro": "", "ok_em": 0}
 LOCK = threading.Lock()
@@ -72,8 +72,13 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?")[0]
         if path in ("/", "/index.html"):
-            with open(os.path.join(C.BASE_DIR, "painel.html"), "rb") as f:
-                self._send(f.read(), "text/html; charset=utf-8")
+            with open(os.path.join(C.BASE_DIR, "painel.html"), encoding="utf-8") as f:
+                self._send(site_extras.montar_painel(f.read()).encode("utf-8"), "text/html; charset=utf-8")
+        elif path.lstrip("/") in site_extras.paginas():          # sobre, privacidade, termos, contato...
+            nome = path.lstrip("/")
+            tipo = "text/html; charset=utf-8" if nome.endswith(".html") else (
+                "application/xml; charset=utf-8" if nome.endswith(".xml") else "text/plain; charset=utf-8")
+            self._send(site_extras.paginas()[nome].encode("utf-8"), tipo)
         elif path == "/logo.jpg":
             try:
                 with open(os.path.join(C.BASE_DIR, "logo.jpg"), "rb") as f:

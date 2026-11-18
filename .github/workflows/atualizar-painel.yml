@@ -56,6 +56,10 @@ jobs:
         env:
           VELL_RPC_ARCHIVE: ${{ secrets.VELL_RPC_ARCHIVE }}
           VELL_INTERVALO_SITE: "600"
+          # endereço do site, código do AdSense e e-mail de contato (Settings > Secrets and variables > Actions > Variables)
+          VELL_SITE_URL: ${{ vars.VELL_SITE_URL }}
+          VELL_ADSENSE_ID: ${{ vars.VELL_ADSENSE_ID }}
+          VELL_EMAIL_CONTATO: ${{ vars.VELL_EMAIL_CONTATO }}
         run: python gerar_site.py _site
 
       # só guarda quando tudo deu certo (execução cancelada ou com erro não estraga o banco salvo)
