@@ -35,11 +35,12 @@ def adsense_tag(c=None):
 RODAPE = """<footer class="rodape">
   <nav><a href="./">Painel</a> · <a href="sobre.html">Sobre e guia</a> · <a href="privacidade.html">Privacidade</a> · <a href="termos.html">Termos de uso</a> · <a href="contato.html">Contato</a></nav>
   <p>Este site mostra dados públicos da blockchain apenas para fins informativos e educativos. Nada aqui é recomendação de compra, venda ou investimento. Criptomoedas são de alto risco: você pode perder todo o valor investido.</p>
+  <p class="autoria">Produzido por Ramires Corporation © 2026</p>
 </footer>"""
 
 CSS_RODAPE = """.rodape{border-top:1px solid #262a33;margin-top:30px;padding:18px 20px 26px;color:#9aa0aa;font-size:12.5px;text-align:center}
 .rodape nav{display:block;border:0;padding:0;margin-bottom:6px}.rodape a{color:#9db4ff}
-.rodape p{max-width:820px;margin:0 auto}
+.rodape p{max-width:820px;margin:0 auto}.rodape .autoria{margin-top:8px;color:#c8ccd4}
 #cookies{position:fixed;left:12px;right:12px;bottom:12px;z-index:30;display:none;gap:12px;align-items:center;flex-wrap:wrap;max-width:760px;margin:0 auto;background:#171a21;border:1px solid #4a5060;border-radius:12px;padding:12px 14px;font-size:13px;color:#c8ccd4;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 #cookies.on{display:flex}#cookies span{flex:1 1 300px}#cookies a{color:#9db4ff}
 #cookies button{background:#2ec4a6;color:#0f1115;border:0;border-radius:8px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer}"""
