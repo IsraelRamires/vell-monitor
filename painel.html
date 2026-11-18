@@ -17,6 +17,10 @@ header h1 span{color:var(--red)}
 nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px;border-bottom:1px solid var(--line)}
 nav button,.seg button{background:transparent;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:7px 13px;cursor:pointer;font:inherit}
 nav button.on,.seg button.on{background:var(--card);color:#fff;border-color:#4a5060}
+/* dourado "ouro luxo": texto com degradê metálico */
+.ouro{background:linear-gradient(180deg,#fff6d5 0%,#f6dc8a 28%,#d4af37 55%,#a87d1e 78%,#e8c766 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;font-weight:600}
+nav button{border-color:#3a3222}nav button:hover{border-color:#8a6d2a}
+nav button.on{border-color:#d4af37;box-shadow:0 0 0 1px rgba(212,175,55,.25),0 0 10px rgba(212,175,55,.18)}
 #wrap{display:flex;align-items:flex-start;max-width:1600px;margin:0 auto}
 #logo{position:sticky;top:76px;flex:0 0 170px;width:170px;padding:18px 0 0 20px;z-index:4}
 #ref-lado{display:flex;flex-direction:column;gap:8px;margin-top:14px;background:var(--card);border:1px solid #5a3a1a;border-radius:10px;padding:11px;font-size:12.5px}
@@ -913,7 +917,7 @@ function render(){
   $("wait").style.display="none";$("main").style.display="";$("logo").style.display="";$("ref-btn").style.display=D.indicacao&&D.indicacao.codigo?"":"none";
   const I=D.indicacao;
   $("ref-lado").innerHTML=I&&I.codigo?`<b>Ainda não tem a carteira Vellora?</b><span class="mut">Baixe o aplicativo e use o código de indicação no cadastro.</span><span class="codigo">${I.codigo}</span><button class="sec ref-cp" onclick="refCopiar()">Copiar</button><button class="refbtn" onclick="refAbrir()">Baixar carteira</button>`:"";
-  $("nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join("");
+  $("nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" data-t="${t[0]}"><span class="ouro">${t[1]}</span></button>`).join("");
   $("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;localStorage.setItem("vell_tab",tab);render()});
   document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="t-"+tab));
   document.querySelectorAll(".seg[data-range]").forEach(el=>{const k=el.dataset.range;seg(el,PERIODOS,range[k],v=>{range[k]=v;render()})});
