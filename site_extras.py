@@ -28,8 +28,15 @@ def adsense_tag(c=None):
     c = c or cfg()
     if not c["adsense"]:
         return ""
+    pub = c["adsense"].replace("ca-", "", 1)
     return (f'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={c["adsense"]}" '
-            f'crossorigin="anonymous"></script>\n<meta name="google-adsense-account" content="{c["adsense"]}">\n')
+            f'crossorigin="anonymous"></script>\n<meta name="google-adsense-account" content="{c["adsense"]}">\n'
+            # recuperação de bloqueio de anúncios (AdSense > Privacidade e mensagens > Inclusão de tags)
+            f'<script async src="https://fundingchoicesmessages.google.com/i/{pub}?ers=1"></script>'
+            "<script>(function() {function signalGooglefcPresent() {if (!window.frames['googlefcPresent']) {if (document.body) "
+            "{const iframe = document.createElement('iframe'); iframe.style = 'width: 0; height: 0; border: none; z-index: -1000; "
+            "left: -1000px; top: -1000px;'; iframe.style.display = 'none'; iframe.name = 'googlefcPresent'; "
+            "document.body.appendChild(iframe);} else {setTimeout(signalGooglefcPresent, 0);}}}signalGooglefcPresent();})();</script>\n")
 
 
 RODAPE = """<footer class="rodape">
