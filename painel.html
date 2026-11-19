@@ -739,7 +739,7 @@ function rLiqBnb(){
 function rLiquidez(){
   const L=D.liquidez,r=D.resumo;
   rLiqBnb();
-  kpis("liq-kpis",[["Liquidez total",usd(r.liquidez_usd,0)],["VELL no pool",big(r.reserva_tok)],["BNB no pool",nf(r.reserva_bnb,2)],["Liquidez travada",nf(L.lp_travado_pct,1)+"%","queimada ou em cofre"],["Liquidez / valor de mercado",nf(r.liq_sobre_mcap,1)+"%"]]);
+  kpis("liq-kpis",[["Liquidez total",usd(r.liquidez_usd,0)],["Supply total",big(r.supply),`${nf(r.supply)} VELL · ${nf(r.supply?r.reserva_tok/r.supply*100:null,2)}% está no pool`],["VELL no pool",big(r.reserva_tok)],["BNB no pool",nf(r.reserva_bnb,2)],["Liquidez travada",nf(L.lp_travado_pct,1)+"%","queimada ou em cofre"],["Liquidez / valor de mercado",nf(r.liq_sobre_mcap,1)+"%"]]);
   table("tb-imp",[{t:"Tamanho da ordem",f:r=>usd(r.usd,0)},{t:"Ao comprar, paga a mais",n:1,f:r=>pc(r.compra,2)},{t:"Ao vender, recebe a menos",n:1,f:r=>pc(r.venda,2)}],L.impacto);
   table("tb-lp",[{t:"Quem",f:r=>addr(r.end,r.rotulo||(r.tipo==="contrato"?"contrato":""))},{t:"Cotas",n:1,f:r=>nf(r.lp,2)},{t:"% do pool",n:1,f:r=>nf(r.pct,2)+"%"}],L.lp_holders);
   table("tb-liqev",[{t:"Quando",f:r=>dtm(r.ts)},{t:"Tipo",f:r=>r.tipo==="entrada"?'<span class="up">entrada</span>':'<span class="dn">saída</span>'},{t:"Valor",n:1,f:r=>usd(r.usd,0)},{t:"VELL",n:1,f:r=>big(r.tok)},{t:"BNB",n:1,f:r=>nf(r.bnb,3)},{t:"Quem",f:r=>addr(r.quem)},{t:"Transação",f:r=>txl(r.tx)}],L.eventos);
