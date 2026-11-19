@@ -35,8 +35,20 @@ main{padding:18px 20px 60px;max-width:1500px;margin:0 auto;flex:1 1 0;min-width:
 .curso .preco{color:var(--txt);font-weight:600}
 .curso a.cta{display:block;text-align:center;background:linear-gradient(90deg,#d4a737,#f1c40f);color:#111;font-weight:700;border-radius:9px;padding:8px 10px;text-decoration:none;white-space:nowrap}
 .curso a.cta:hover{filter:brightness(1.08);text-decoration:none}
-#curso-faixa{display:none}
-@media(max-width:700px){#curso-lado{display:none}#curso-faixa{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0 4px}#curso-faixa .tx{flex:1 1 200px}}
+#curso-topo{display:none}
+/* celular: topo em grade — título | botão da carteira / preço / horário | banner do curso */
+@media(max-width:700px){
+  #curso-lado{display:none}
+  header{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:8px;padding:12px 14px;align-items:center}
+  header h1{grid-area:1/1;font-size:clamp(14px,4.4vw,17px);white-space:nowrap}
+  header .refbtn{grid-area:1/2;margin:0;padding:7px 9px;font-size:clamp(11px,3.3vw,12.5px)}
+  #hdr{grid-area:2/1/3/3}
+  header #status{grid-area:3/1;text-align:left;font-size:11.5px;align-self:center}
+  #curso-topo{grid-area:3/2;display:flex;flex-direction:column;gap:1px;margin:0;padding:7px 10px;max-width:190px;font-size:11.5px;line-height:1.3;text-decoration:none}
+  #curso-topo b{font-size:12.5px}
+  #curso-topo .preco{color:var(--txt)}
+  #curso-topo .vai{color:#f1c40f;font-weight:700}
+}
 @media(max-width:700px){#logo{flex-basis:auto;width:auto}#ref-lado{display:none}#logo{padding-left:10px}#logo img{width:44px;height:44px;border-radius:10px}main{padding-left:10px}}
 section{display:none}section.on{display:block}
 h2{font-size:16px;margin:26px 0 4px}
@@ -130,13 +142,13 @@ header #status{margin-left:0}
   <div id="hdr" class="mut"></div>
   <button class="refbtn" id="ref-btn" style="display:none" onclick="refAbrir()">Baixar carteira Vellora</button>
   <div id="status">carregando…</div>
+  <a id="curso-topo" class="curso" target="_blank" rel="sponsored noopener"></a>
 </header>
 <nav id="nav"></nav>
 <div id="wait">Preparando os dados… Na primeira vez o programa baixa todo o histórico da blockchain (10 a 20 minutos).<div id="waitd" style="margin-top:8px"></div></div>
 <div id="wrap">
 <aside id="logo" style="display:none"><img src="logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div><div id="curso-lado" class="curso"></div></aside>
 <main id="main" style="display:none">
-<div id="curso-faixa" class="curso"></div>
 
 <section id="t-geral">
   <h2>Resumo agora</h2>
@@ -936,7 +948,8 @@ function render(){
   if(!$("curso-lado").innerHTML){
     const a=`<a class="cta" href="${CURSO.link}" target="_blank" rel="sponsored noopener">Conhecer o curso</a>`;
     $("curso-lado").innerHTML=`<span class="ind">Indicação</span><b>${CURSO.nome}</b><span>${CURSO.txt}</span><span class="preco">${CURSO.preco}</span>${a}`;
-    $("curso-faixa").innerHTML=`<div class="tx"><span class="ind">Indicação</span><br><b>${CURSO.nome}</b> · ${CURSO.txt} <span class="preco">${CURSO.preco}</span></div>${a}`;
+    $("curso-topo").href=CURSO.link;   // versão compacta, no topo do celular
+    $("curso-topo").innerHTML=`<span class="ind">Indicação</span><b>${CURSO.nome}</b><span><span class="preco">${CURSO.preco}</span> · <span class="vai">Conhecer ›</span></span>`;
   }
   $("nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" data-t="${t[0]}"><span class="ouro">${t[1]}</span></button>`).join("");
   $("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;localStorage.setItem("vell_tab",tab);render()});
