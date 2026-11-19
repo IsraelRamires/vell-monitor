@@ -233,24 +233,6 @@ header #status{margin-left:0}
     <div><h2>Parte dos VELL em mãos de longo prazo (%)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-qtd"></canvas></div></div></div>
     <div><h2>Vendas de holders de longo prazo por dia (US$)</h2><div class="card"><div class="chart sm"><canvas id="c-lth-venda"></canvas></div></div></div>
   </div>
-  <h2>Consultar lucro ou prejuízo de uma carteira <button class="ajuda" id="cc-ajuda-btn" onclick="ajudaCc()">Entenda ▾</button></h2>
-  <div class="card ajuda-txt" id="cc-ajuda" style="display:none">
-    <h4>Como o resultado é calculado</h4>
-    <ul><li><b>Custo de cada VELL:</b> o preço pago na compra no pool. VELL recebido por transferência entra pelo preço de mercado no momento em que chegou.</li>
-    <li><b>VELL sem custo:</b> recebido antes do início das negociações (distribuição inicial). Não tem preço de referência, por isso aparece à parte.</li>
-    <li><b>Resultado em aberto:</b> quanto o saldo atual vale hoje menos quanto ele custou. Só vira lucro ou prejuízo de verdade se vender.</li>
-    <li><b>Resultado das vendas:</b> o que recebeu em cada venda menos o custo dos VELL vendidos. Os VELL mais antigos da carteira saem primeiro.</li>
-    <li><b>Preço para empatar:</b> o custo médio dos VELL que a carteira tem hoje.</li>
-    <li><b>Saldo total de lucro ou prejuízo no período:</b> vendas + valor do saldo atual − compras − valor do saldo no início do período (pelo preço daquele momento). VELL recebido por transferência no período é descontado pelo preço da hora em que chegou, e VELL enviado é somado, para que presentes e envios entre carteiras não pareçam lucro ou prejuízo.</li>
-    <li><b>Desde o lançamento:</b> o saldo inicial é zero. VELL recebido antes do início das negociações não tem preço e entra como ganho.</li></ul>
-    <p>É uma estimativa feita com os dados públicos da blockchain. Não inclui taxa de gás, e transferências entre carteiras da mesma pessoa podem distorcer o custo.</p>
-  </div>
-  <div class="card cc-busca">
-    <input id="cc-end" type="text" placeholder="Cole o endereço da carteira (0x…)" spellcheck="false" autocomplete="off" onkeydown="if(event.key==='Enter')consultarCarteira()">
-    <button class="refbtn" onclick="consultarCarteira()">Consultar</button>
-  </div>
-  <div class="seg" id="cc-per"></div>
-  <div id="cc-res"></div>
 </section>
 
 <section id="t-volume">
@@ -317,6 +299,24 @@ header #status{margin-left:0}
   <h2>Grupos de carteiras ligadas</h2>
   <p class="exp">Carteiras que transferiram VELL diretamente entre si, o que sugere o mesmo dono. O saldo do grupo é a soma de todas.</p>
   <div class="card scroll" id="tb-grupos"></div>
+  <h2>Consultar lucro ou prejuízo de uma carteira <button class="ajuda" id="cc-ajuda-btn" onclick="ajudaCc()">Entenda ▾</button></h2>
+  <div class="card ajuda-txt" id="cc-ajuda" style="display:none">
+    <h4>Como o resultado é calculado</h4>
+    <ul><li><b>Custo de cada VELL:</b> o preço pago na compra no pool. VELL recebido por transferência entra pelo preço de mercado no momento em que chegou.</li>
+    <li><b>VELL sem custo:</b> recebido antes do início das negociações (distribuição inicial). Não tem preço de referência, por isso aparece à parte.</li>
+    <li><b>Resultado em aberto:</b> quanto o saldo atual vale hoje menos quanto ele custou. Só vira lucro ou prejuízo de verdade se vender.</li>
+    <li><b>Resultado das vendas:</b> o que recebeu em cada venda menos o custo dos VELL vendidos. Os VELL mais antigos da carteira saem primeiro.</li>
+    <li><b>Preço para empatar:</b> o custo médio dos VELL que a carteira tem hoje.</li>
+    <li><b>Saldo total de lucro ou prejuízo no período:</b> vendas + valor do saldo atual − compras − valor do saldo no início do período (pelo preço daquele momento). VELL recebido por transferência no período é descontado pelo preço da hora em que chegou, e VELL enviado é somado, para que presentes e envios entre carteiras não pareçam lucro ou prejuízo.</li>
+    <li><b>Desde o lançamento:</b> o saldo inicial é zero. VELL recebido antes do início das negociações não tem preço e entra como ganho.</li></ul>
+    <p>É uma estimativa feita com os dados públicos da blockchain. Não inclui taxa de gás, e transferências entre carteiras da mesma pessoa podem distorcer o custo.</p>
+  </div>
+  <div class="card cc-busca">
+    <input id="cc-end" type="text" placeholder="Cole o endereço da carteira (0x…)" spellcheck="false" autocomplete="off" onkeydown="if(event.key==='Enter')consultarCarteira()">
+    <button class="refbtn" onclick="consultarCarteira()">Consultar</button>
+  </div>
+  <div class="seg" id="cc-per"></div>
+  <div id="cc-res"></div>
 </section>
 
 <section id="t-fluxo">
@@ -568,9 +568,6 @@ const LCOR={"ultra otimista":"#00d18f","otimista":"#2ec4a6","neutro":"#9aa0aa","
 const leiRot=sc=>sc==null?null:sc>=50?"ultra otimista":sc>=15?"otimista":sc>-15?"neutro":sc>-50?"pessimista":"ultra pessimista";
 function ajudaLei(){const e=$("lei-ajuda"),ab=e.style.display==="none";e.style.display=ab?"":"none";$("lei-ajuda-btn").textContent=ab?"Fechar ▴":"Entenda ▾"}
 function rLeitura(){
-  // consulta de carteira: lembra o último endereço e atualiza o resultado com o preço novo
-  if(!$("cc-end").value){try{$("cc-end").value=localStorage.getItem("vell_cc")||""}catch(e){}}
-  if($("cc-res").innerHTML&&$("cc-end").value)consultarCarteira();
   rSth();rLth();
   const L=D.leitura||{},P=L.prazos||{},ord=["curto","medio","longo","anual","tudo"].filter(k=>P[k]);
   if(!ord.length){$("lei-cards").innerHTML='<div class="mut">Ainda não há histórico suficiente para calcular a leitura.</div>';return}
@@ -613,6 +610,9 @@ function rVolume(){
     .concat(cel.slice(0,3).map((c,k)=>[`${k+1}º horário com mais volume`,`<span class="up">${dn[c.i]} ${c.j}h</span>`,`${usd(c.v,0)} · ${nf(c.v/tot*100,1)}% do volume`])));
 }
 function rCarteiras(){
+  // consulta de carteira: lembra o último endereço e atualiza o resultado com o preço novo
+  if(!$("cc-end").value){try{$("cc-end").value=localStorage.getItem("vell_cc")||""}catch(e){}}
+  if($("cc-res").innerHTML&&$("cc-end").value)consultarCarteira();
   const C=D.carteiras,c=C.concentracao;
   kpis("conc",[["10 maiores carteiras",nf(c.top10,1)+"%"],["20 maiores",nf(c.top20,1)+"%"],["50 maiores",nf(c.top50,1)+"%"],["100 maiores",nf(c.top100,1)+"%"],["No pool de liquidez",nf(c.pool_pct,2)+"%"],["Travado em cofre",nf(c.cofre_pct,2)+"%","tokens presos em cofre de bloqueio"]]);
   table("tb-faixas",[{t:"Faixa",f:r=>({baleia:"Baleia (1% ou mais)","tubarão":"Tubarão (0,1% a 1%)",peixe:"Peixe (0,01% a 0,1%)","camarão":"Camarão (menos de 0,01%)"})[r.faixa]},{t:"Carteiras",n:1,f:r=>nf(r.n)},{t:"VELL",n:1,f:r=>big(r.tokens)},{t:"% do total",n:1,f:r=>nf(r.pct,2)+"%"}],C.faixas);
