@@ -1114,7 +1114,8 @@ def build():
         mudou = {pz: 0 for pz in PRAZOS}
         for i in amostras:
             b_, a_ = ajustados(i, last_i)
-            linha = [hs[i][0] + 3600, hs[i][2]]
+            # fim da hora; para a hora ainda em andamento, o momento atual (não um horário futuro)
+            linha = [min(hs[i][0] + 3600, now), hs[i][2]]
             for pz, P in PRAZOS.items():
                 sc = a_[pz]
                 linha.append(None if sc is None else round(sc, 1))
