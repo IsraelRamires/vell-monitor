@@ -495,7 +495,12 @@ function velas(k,src){
   if(k==="mensal"){const out=[];let cur=null,key=null;   // um candle por mês
     for(const x of src){const g=mesKey(x[0]);if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
     out.mensal=true;return out}
-  const n=Math.min(RNG[k],src.length),v=src.slice(-n),step=vela==="auto"?(n<=48?1:n<=200?4:24):+vela;
+  const n=Math.min(RNG[k],src.length),v=src.slice(-n);
+  if(vela==="mes"||vela==="ano"){   // um candle por mês ou por ano do calendário
+    const kf=vela==="mes"?mesKey:(ts=>new Date((ts+dtz())*1000).getUTCFullYear()),out=[];let cur=null,key=null;
+    for(const x of v){const g=kf(x[0]);if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
+    out[vela==="mes"?"mensal":"anual"]=true;return out}
+  const step=vela==="auto"?(n<=48?1:n<=200?4:24):+vela;
   if(step===1)return v;
   const out=[];let cur=null,key=null;
   for(const x of v){const g=Math.floor((x[0]+dtz())/(step*3600));if(g!==key){key=g;cur=[x[0],x[1],x[2],x[3],x[4]];out.push(cur)}else{cur[2]=Math.max(cur[2],x[2]);cur[3]=Math.min(cur[3],x[3]);cur[4]=x[4]}}
@@ -504,7 +509,7 @@ function precoCfg(k,extraY={},S={}){
   const fm=S.fmt||(x=>usd(x,6)),tk=S.tick||(x=>nf(x,5)),cor=S.cor||"#ff4d4f";
   if(tipo==="candles"){
     const v=velas(k,S.velas),col=v.map(x=>x[4]>=x[1]?"#2ec4a6":"#ff4d4f"),lo=Math.min(...v.map(x=>x[3])),hi=Math.max(...v.map(x=>x[2]));
-    return {lo,hi,cfg:{type:"bar",data:{labels:v.map(x=>v.mensal?mesLbl(x[0]):dtm(x[0])),datasets:[
+    return {lo,hi,cfg:{type:"bar",data:{labels:v.map(x=>v.mensal?mesLbl(x[0]):v.anual?String(new Date((x[0]+dtz())*1000).getUTCFullYear()):dtm(x[0])),datasets:[
       {label:"pavio",data:v.map(x=>[x[3],x[2]]),backgroundColor:col,barThickness:1.5,grouped:false,order:2},
       {label:"corpo",data:v.map(x=>[Math.min(x[1],x[4]),Math.max(x[1],x[4])]),backgroundColor:col,barPercentage:.85,categoryPercentage:.95,grouped:false,minBarLength:1.5,order:1}]},
       options:{plugins:{legend:{display:false},tooltip:{filter:i=>i.datasetIndex===1,callbacks:{label:c=>{const x=v[c.dataIndex];return [`Abertura: ${fm(x[1])}`,`Máxima: ${fm(x[2])}`,`Mínima: ${fm(x[3])}`,`Fechamento: ${fm(x[4])}`,`Variação: ${nf((x[4]/x[1]-1)*100,2)}%`]}}}},scales:{y:Object.assign({ticks:{callback:tk}},extraY)}}}}}
@@ -940,7 +945,7 @@ function render(){
   document.querySelectorAll(".seg[data-range]").forEach(el=>{const k=el.dataset.range;seg(el,PERIODOS,range[k],v=>{range[k]=v;render()})});
   document.querySelectorAll(".seg[data-tipo]").forEach(el=>{
     el.innerHTML=selHtml("Tipo de gráfico",[["linha","Linha"],["area","Área"],["candles","Candles"]],tipo,"tipo")
-      +(tipo==="candles"?selHtml("Cada candle",[["auto","Automático"],["1","1 hora"],["4","4 horas"],["24","1 dia"]],vela,"vela"):"");
+      +(tipo==="candles"?selHtml("Cada candle",[["auto","Automático"],["1","1 hora"],["4","4 horas"],["24","1 dia"],["mes","1 mês"],["ano","1 ano"]],vela,"vela"):"");
     el.querySelectorAll("select").forEach(x=>x.onchange=()=>{if(x.dataset.k==="tipo"){tipo=x.value;localStorage.setItem("vell_tipo",tipo)}else{vela=x.value;localStorage.setItem("vell_vela",vela)}render()})});
   $("hdr").innerHTML=`${usd(D.resumo.preco,6)} &nbsp; ${pc(D.resumo.var_24h)} em 24h`;
   try{R[tab]()}catch(e){console.error(e);$("status").textContent="Erro ao desenhar: "+e.message}
