@@ -455,7 +455,7 @@ const nf=(n,d=0)=>n==null||isNaN(n)?"—":n.toLocaleString("pt-BR",{minimumFract
 const usd=(n,d)=>n==null||isNaN(n)?"—":"US$ "+nf(n,d??(Math.abs(n)<1?(Math.abs(n)<0.01?6:4):Math.abs(n)<100?2:0));
 const pc=(n,d=1)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${nf(n,d)}%</span>`;
 const sg=(n,f)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${f(n)}</span>`;
-const big=n=>n==null?"—":Math.abs(n)>=1e6?nf(n/1e6,2)+" mi":Math.abs(n)>=1e3?nf(n/1e3,1)+" mil":nf(n,0);
+const big=n=>n==null?"—":Math.abs(n)>=1e9?nf(n/1e9,2)+" bi":Math.abs(n)>=1e6?nf(n/1e6,2)+" mi":Math.abs(n)>=1e3?nf(n/1e3,1)+" mil":nf(n,0);
 const tz=()=> (D?.tz??-3)*3600;   // fuso para mostrar datas e horas (Brasília)
 const dtz=()=> (D?.dia_tz??0)*3600;   // dias fecham às 21:00 de Brasília (00:00 UTC), como o candle diário do DexScreener
 const dtm=ts=>{if(!ts)return"—";const d=new Date((ts+tz())*1000);const p=x=>String(x).padStart(2,"0");return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`};
