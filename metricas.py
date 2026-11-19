@@ -1264,7 +1264,8 @@ def build():
     q24 = queimas["24h"]
     if burns:
         sinais.append({"tipo": "fluxo", "txt": f"Queima: {br(q24['qtd'])} VELL (US$ {br(q24['usd'])}) queimados nas últimas 24h em {q24['n']} queimas. "
-                                               f"Total já queimado: {br(q_total)} VELL ({fn(q_total / total_supply * 100, 3)}% do fornecimento).",
+                                               f"Total já queimado: {br(q_total)} VELL (US$ {br(q_total * price)} no preço atual · "
+                                               f"{fn(q_total / total_supply * 100, 3)}% do fornecimento).",
                        "ir": {"aba": "queimas", "alvo": "qm-kpis"}})
 
     def trade_out(t):
