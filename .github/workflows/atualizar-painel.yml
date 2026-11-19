@@ -82,8 +82,28 @@ jobs:
         with:
           path: _site
 
+      # O GitHub às vezes falha ao publicar ("No artifacts named github-pages"): espera e tenta de novo
       - name: Publicar
         id: publicar
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Esperar antes de tentar publicar de novo
+        if: steps.publicar.outcome == 'failure'
+        run: sleep 30
+
+      - name: Publicar (2ª tentativa)
+        id: publicar2
+        if: steps.publicar.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+
+      - name: Esperar antes da última tentativa
+        if: steps.publicar.outcome == 'failure' && steps.publicar2.outcome == 'failure'
+        run: sleep 60
+
+      - name: Publicar (3ª tentativa)
+        if: steps.publicar.outcome == 'failure' && steps.publicar2.outcome == 'failure'
         uses: actions/deploy-pages@v4
 
       # O agendador do GitHub (schedule) atrasa muito ou não roda em repositórios novos.
