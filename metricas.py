@@ -1150,17 +1150,38 @@ def build():
     Hh = leitura["historico"]
     if Hh:
         novas, seguem = [], None
+        # o momento de cada mudança fica gravado no banco: o horário só muda quando o status muda de novo
+        try:
+            estado = json.loads(meta.get("leitura_estado") or "{}")
+        except ValueError:
+            estado = {}
         for ci, pz in ((2, "curto"), (3, "medio"), (4, "longo")):
             s_ = [(x[0], rotulo(x[ci])) for x in Hh if x[ci] is not None]
             if len(s_) < 2:
                 continue
-            k = len(s_) - 1
-            while k > 0 and s_[k - 1][1] == s_[-1][1]:
-                k -= 1
-            if k > 0 and s_[k][0] >= now - DAY:
-                novas.append((pz, s_[k - 1][1], s_[-1][1], s_[k][0]))
-            elif pz == "curto" and k > 0:
-                seguem = (s_[-1][1], s_[k][0])
+            para = s_[-1][1]
+            e = estado.get(pz)
+            if not e:       # primeira vez: estima pelo histórico
+                k = len(s_) - 1
+                while k > 0 and s_[k - 1][1] == para:
+                    k -= 1
+                desde = s_[k][0] if k < len(s_) - 1 else (now // 3600) * 3600   # mudou na hora em andamento: início dela
+                e = {"rot": para, "de": s_[k - 1][1] if k > 0 else None, "desde": desde}
+            elif e["rot"] != para:
+                e = {"rot": para, "de": e["rot"], "desde": now}
+            estado[pz] = e
+            if e["de"] and e["desde"] >= now - DAY:
+                novas.append((pz, e["de"], para, e["desde"]))
+            elif pz == "curto" and e["de"]:
+                seguem = (para, e["desde"])
+        try:
+            con_ = sqlite3.connect(C.DB_PATH, timeout=30)
+            con_.execute("INSERT INTO meta(k,v) VALUES('leitura_estado',?) ON CONFLICT(k) DO UPDATE SET v=excluded.v",
+                         (json.dumps(estado),))
+            con_.commit()
+            con_.close()
+        except sqlite3.Error:
+            pass
         for pz, de, para, ts_ in novas:
             sinais.append({"tipo": "compra" if ROTULOS.index(para) > ROTULOS.index(de) else "venda",
                            "txt": f"A leitura de {PRAZOS[pz]['nome'].lower()} mudou de {de} para {para} ({quando(ts_)}).",
