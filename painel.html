@@ -610,8 +610,8 @@ function rVolume(){
     .concat(cel.slice(0,3).map((c,k)=>[`${k+1}º horário com mais volume`,`<span class="up">${dn[c.i]} ${c.j}h</span>`,`${usd(c.v,0)} · ${nf(c.v/tot*100,1)}% do volume`])));
 }
 function rCarteiras(){
-  // consulta de carteira: lembra o último endereço e atualiza o resultado com o preço novo
-  if(!$("cc-end").value){try{$("cc-end").value=localStorage.getItem("vell_cc")||""}catch(e){}}
+  // consulta de carteira: o campo começa vazio (não guarda o último endereço); atualiza o resultado com o preço novo
+  try{localStorage.removeItem("vell_cc")}catch(e){}     // apaga o endereço que versões antigas guardavam
   if($("cc-res").innerHTML&&$("cc-end").value)consultarCarteira();
   const C=D.carteiras,c=C.concentracao;
   kpis("conc",[["10 maiores carteiras",nf(c.top10,1)+"%"],["20 maiores",nf(c.top20,1)+"%"],["50 maiores",nf(c.top50,1)+"%"],["100 maiores",nf(c.top100,1)+"%"],["No pool de liquidez",nf(c.pool_pct,2)+"%"],["Travado em cofre",nf(c.cofre_pct,2)+"%","tokens presos em cofre de bloqueio"]]);
@@ -831,7 +831,6 @@ let CART=null,CEV={_em:0},ccPer=(()=>{try{return localStorage.getItem("vell_ccpe
 async function consultarCarteira(){
   const a=($("cc-end").value||"").trim().toLowerCase(),out=$("cc-res");
   if(!/^0x[0-9a-f]{40}$/.test(a)){out.innerHTML='<div class="card mut">Endereço inválido. Ele começa com 0x e tem 42 caracteres.</div>';return}
-  try{localStorage.setItem("vell_cc",a)}catch(e){}
   if(!CART||CART.gerado_em<D.gerado_em){
     out.innerHTML='<div class="card mut">Carregando as carteiras…</div>';
     try{CART=await fetch("api/carteiras?t="+Date.now()).then(r=>r.json())}catch(e){out.innerHTML='<div class="card mut">Não foi possível carregar os dados das carteiras. Tente de novo em instantes.</div>';return}
