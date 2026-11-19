@@ -37,7 +37,8 @@ FECHAMENTO_DIA_UTC = 0
 # Faixas de tamanho de carteira (em % do fornecimento total)
 WHALE_PCT = 1.0                     # baleia: 1% ou mais do supply
 SHARK_PCT = 0.1                     # tubarão: de 0,1% a 1%
-BIG_TRADE_USD = 500                 # negociação "grande" a partir deste valor em USD
+BIG_TRADE_TOK = 100_000             # compra ou venda "grande" a partir desta quantidade de tokens
+LIQ_EVENTO_USD = 500                # entrada/saída de liquidez que vira destaque a partir deste valor em USD
 
 # --- Indicação da carteira Vellora (botão "Baixar carteira" do painel) ------
 REF_CODIGO = "9A801622"             # seu código de indicação

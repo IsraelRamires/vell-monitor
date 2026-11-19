@@ -498,6 +498,7 @@ setInterval(sigGirar,20000);
 $("sinais").onmouseenter=()=>sigPausa=true;$("sinais").onmouseleave=()=>sigPausa=false;
 const TABS=[["geral","Visão geral"],["leitura","Leitura do mercado"],["fluxo","Compras e vendas"],["volume","Volume"],["carteiras","Baleias e carteiras"],["liquidez","Liquidez e contrato"],["queimas","Queimas / burn"],["bnb","VELL x tokens"],["minha","Minha carteira"]];
 let D=null, tab=localStorage.getItem("vell_tab")||"geral", charts={}, range={preco:"7d",bnb:"7d",perfil:"tudo",liqb:"30d"}, showPerfil=true, lthK=localStorage.getItem("vell_lth")||"30d", sthK=localStorage.getItem("vell_sth")||"7d", leiPz="curto", relRef=localStorage.getItem("vell_relref")||"BNB", liqModo=localStorage.getItem("vell_liqmodo")||"bnb", sel=(()=>{try{return JSON.parse(localStorage.getItem("vell_sel"))||["BNB"]}catch(e){return ["BNB"]}})(), tipo=localStorage.getItem("vell_tipo")||"linha", vela=localStorage.getItem("vell_vela")||"auto", movWin="24h", fluxoF="todas", fluxoPer="24h";
+const GTOK=()=>(D&&D.grande_tok)||100000;   // compra/venda "grande": a partir desta quantidade de tokens
 const nf=(n,d=0)=>n==null||isNaN(n)?"—":n.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
 const usd=(n,d)=>n==null||isNaN(n)?"—":"US$ "+nf(n,d??(Math.abs(n)<1?(Math.abs(n)<0.01?6:4):Math.abs(n)<100?2:0));
 const pc=(n,d=1)=>n==null||isNaN(n)?"—":`<span class="${n>0?'up':n<0?'dn':''}">${n>0?'+':''}${nf(n,d)}%</span>`;
@@ -767,10 +768,12 @@ function rFluxo(){
     (()=>{if(!tot)return ["Pressão","—","sem negociações no período"];const p=vc/tot*100;   // decidida pelo valor em US$, não pelo número de negócios
       return Math.abs(p-50)<2.5?["Pressão","Equilibrada",`${nf(p,0)}% do valor em compras`]:p>50?["Pressão compradora",`<span class="up">${nf(p,0)}%</span>`,"do valor negociado foi compra"]:["Pressão vendedora",`<span class="dn">${nf(100-p,0)}%</span>`,"do valor negociado foi venda"]})(),["Volume total",usd(tot,0),`${nf(n)} negócios`],["Valor médio por negócio",usd(n?tot/n:0,0)],
     ["Taxas do token",`<span class="up">${F.taxa_compra==null?"—":nf(F.taxa_compra*100,1)+"%"}</span> <span class="mut" style="font-size:14px">compra</span> · <span class="dn">${F.taxa_venda==null?"—":nf(F.taxa_venda*100,1)+"%"}</span> <span class="mut" style="font-size:14px">venda</span>`,"cobradas pelo contrato em cada negociação"]]);
-  seg($("fluxo-seg"),[["todas","Todas"],["compra","Só compras"],["venda","Só vendas"],["g100","US$ 100+"],["grandes","Só grandes (US$ 500+)"],["g1000","US$ 1.000+"],["g5000","US$ 5.000+"]],fluxoF,x=>{fluxoF=x;rFluxo()},"Mostrar");
+  seg($("fluxo-seg"),[["todas","Todas"],["compra","Só compras"],["venda","Só vendas"],["g100","US$ 100+"],["grandes",`Só grandes (${nf(GTOK())} VELL+)`],["g1000","US$ 1.000+"],["g5000","US$ 5.000+"]],fluxoF,x=>{fluxoF=x;rFluxo()},"Mostrar");
   const obj=t=>({ts:t[0],lado:t[1]?"compra":"venda",tok:t[2],bnb:t[3],usd:t[4],preco:t[5],quem:t[6],tx:t[7],taxa:t[8],rotulo:F.rotulos[t[6]]||"",saldo:F.saldos[t[6]]||0});
   const tc=[{t:"Quando",f:r=>dtm(r.ts),s:r=>r.ts},{t:"Tipo",f:r=>`<span class="${r.lado==='compra'?'up':'dn'}">${r.lado}</span>`},{t:"Valor",n:1,f:r=>usd(r.usd,2),s:r=>r.usd},{t:"VELL",n:1,f:r=>big(r.tok),s:r=>r.tok},{t:"BNB",n:1,f:r=>nf(r.bnb,4),s:r=>r.bnb},{t:"Preço",n:1,f:r=>usd(r.preco,6),s:r=>r.preco},{t:"Carteira",f:r=>addr(r.quem,r.rotulo)},{t:"Saldo atual da carteira",n:1,f:r=>big(r.saldo),s:r=>r.saldo},{t:"Taxa",n:1,f:r=>r.taxa==null?"—":nf(r.taxa*100,1)+"%"},{t:"Transação",f:r=>txl(r.tx)}];
-  const fil=T.filter(t=>fluxoF==="todas"||({grandes:500,g100:100,g1000:1000,g5000:5000}[fluxoF]?t[4]>={grandes:500,g100:100,g1000:1000,g5000:5000}[fluxoF]:(t[1]?"compra":"venda")===fluxoF)),MAX=500;
+  // "grandes" = compra ou venda de GTOK() tokens ou mais; os outros filtros são por valor em US$
+  const USDF={g100:100,g1000:1000,g5000:5000};
+  const fil=T.filter(t=>fluxoF==="todas"||(fluxoF==="grandes"?t[2]>=GTOK():USDF[fluxoF]?t[4]>=USDF[fluxoF]:(t[1]?"compra":"venda")===fluxoF)),MAX=500;
   $("fluxo-nota").textContent=fil.length>MAX?`Mostrando as ${MAX} negociações mais recentes de ${nf(fil.length)} no período. Os totais acima contam todas.`:`${nf(fil.length)} negociações no período.`;
   table("tb-trades",tc,fil.slice(-MAX).reverse().map(obj));
   table("tb-grandes",tc,T.slice().sort((a,b)=>b[4]-a[4]).slice(0,60).map(obj));

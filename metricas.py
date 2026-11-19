@@ -892,9 +892,9 @@ def build():
 
     # ------------------------------------------------------------ destaques automáticos
     sinais = []
-    # grandes negociações nas últimas 24h (a partir de C.BIG_TRADE_USD):
+    # grandes negociações nas últimas 24h (a partir de C.BIG_TRADE_TOK tokens):
     #   compras e vendas -> a maior compra e a maior venda; só vendas -> a última venda grande; só compras -> as 3 últimas compras grandes
-    g24 = [t for t in trades if t["ts"] >= now - DAY and t["usd"] >= C.BIG_TRADE_USD]
+    g24 = [t for t in trades if t["ts"] >= now - DAY and t["tok"] >= C.BIG_TRADE_TOK]
     gc_ = [t for t in g24 if t["lado"] == "compra"]
     gv_ = [t for t in g24 if t["lado"] == "venda"]
     IR_TR = {"aba": "fluxo", "alvo": "tb-trades", "cfg": {"fluxoPer": "24h"}}
@@ -916,7 +916,7 @@ def build():
         for t in gc_[-3:][::-1]:
             sinais.append({"tipo": "compra", "txt": txt_trade(t, "Compra grande nas últimas 24h"), "ir": IR_TR})
     for ev in liq_events:
-        if ev["ts"] >= now - 7 * DAY and ev["usd"] >= C.BIG_TRADE_USD:
+        if ev["ts"] >= now - 7 * DAY and ev["usd"] >= C.LIQ_EVENTO_USD:
             sinais.append({"tipo": "liquidez", "txt": f"Liquidez: {ev['tipo']} de US$ {br(ev['usd'])} em {dt.datetime.utcfromtimestamp(ev['ts'] + TZ):%d/%m %H:%M}.",
                            "ir": {"aba": "liquidez", "alvo": "tb-liqev"}})
     r24 = rolling(DAY)
@@ -998,11 +998,11 @@ def build():
         for t in trades[ia:ib]:
             if t["lado"] == "compra":
                 buy += t["usd"]; nb += 1
-                if t["usd"] >= C.BIG_TRADE_USD:
+                if t["tok"] >= C.BIG_TRADE_TOK:
                     bigb += t["usd"]
             else:
                 sell += t["usd"]; ns += 1
-                if t["usd"] >= C.BIG_TRADE_USD:
+                if t["tok"] >= C.BIG_TRADE_TOK:
                     bigs += t["usd"]
         vol = buy + sell
         share = buy / vol if vol > 0 else 0.5
@@ -1051,7 +1051,7 @@ def build():
         else:
             X["fluxo"] = "Volume muito baixo no período para avaliar."
         if (bigb + bigs) > 0:
-            X["grandes"] = f"Negociações de US$ {br(C.BIG_TRADE_USD)} ou mais: US$ {br(bigb)} em compras e US$ {br(bigs)} em vendas."
+            X["grandes"] = f"Negociações de {br(C.BIG_TRADE_TOK)} {C.SYMBOL} ou mais: US$ {br(bigb)} em compras e US$ {br(bigs)} em vendas."
         else:
             X["grandes"] = "Nenhuma negociação grande no período."
         X["liquidez"] = f"BNB no pool variou {fp(lq, 2)} (de {fn(seg[0][6])} para {fn(seg[-1][6])} BNB)."
@@ -1305,7 +1305,7 @@ def build():
 
     out = {
         "gerado_em": now, "ultima_coleta": int(meta.get("last_update") or 0), "ultimo_bloco": int(meta.get("last_block") or 0),
-        "simbolo": C.SYMBOL, "token": C.TOKEN, "par": C.PAIR, "tz": C.TZ_OFFSET_HOURS, "dia_tz": DTZ // 3600, "lancamento": launch,
+        "simbolo": C.SYMBOL, "grande_tok": C.BIG_TRADE_TOK, "token": C.TOKEN, "par": C.PAIR, "tz": C.TZ_OFFSET_HOURS, "dia_tz": DTZ // 3600, "lancamento": launch,
         "resumo": {
             "preco": price, "preco_bnb": price_bnb, "bnb_usd": bnb_now,
             "var_1h": chg(3600), "var_24h": chg(DAY), "var_7d": chg(7 * DAY), "var_30d": chg(30 * DAY),
