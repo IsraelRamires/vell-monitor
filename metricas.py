@@ -344,13 +344,17 @@ def build():
                 w["first"] = ts
             w["last"] = ts
             is_trader = trade is not None and trade["who"] == a
-            # histórico da carteira para a consulta por período: [quando, VELL (+/-), 1=compra 2=venda 0=transferência, US$]
+            # histórico da carteira (aba Minha carteira):
+            # [quando, VELL (+/-), 1=compra 2=venda 0=transferência, US$, transação]
+            # + nas vendas: [resultado da venda (US$), custo dos VELL vendidos (US$)] — só a parte com custo conhecido
             if is_trader and trade["lado"] == "compra" and d > 0:
-                cart_ev[a].append([ts, round(d, 6), 1, round(trade["usd"], 4)])
+                ev_ = [ts, round(d, 6), 1, round(trade["usd"], 4), tx]
             elif is_trader and trade["lado"] == "venda" and d < 0:
-                cart_ev[a].append([ts, round(d, 6), 2, round(trade["usd"], 4)])
+                ev_ = [ts, round(d, 6), 2, round(trade["usd"], 4), tx]
             else:
-                cart_ev[a].append([ts, round(d, 6), 0, round(abs(d) * (cur_px or 0), 4)])
+                ev_ = [ts, round(d, 6), 0, round(abs(d) * (cur_px or 0), 4), tx]
+            cart_ev[a].append(ev_)
+            r_venda = c_venda = 0.0
             if a not in dist_hubs:
                 if d > 0:
                     custo_ = trade["usd"] / d if (is_trader and trade["lado"] == "compra") else cur_px
@@ -368,6 +372,7 @@ def build():
                         if uv > 0 and pv_:
                             if lt[2]:      # resultado da venda, lote a lote (preço de venda - custo do lote)
                                 w["real_lot"] += uv * (pv_ - lt[2]); w["custo_vendido"] += uv * lt[2]
+                                r_venda += uv * (pv_ - lt[2]); c_venda += uv * lt[2]
                             else:
                                 w["venda_sem_custo"] += uv * pv_
                             idade = ts - lt[0]
@@ -387,6 +392,8 @@ def build():
                         lt[1] -= usa; falta -= usa
                         if lt[1] <= 1e-12:
                             dq_.popleft()
+                    if ev_[2] == 2 and c_venda > 0:
+                        ev_ += [round(r_venda, 4), round(c_venda, 4)]
             if is_trader and trade["lado"] == "compra" and d > 0:
                 w["buy_tok"] += d; w["buy_usd"] += trade["usd"]; w["buy_bnb"] += trade["bnb"]; w["n_buy"] += 1
                 w["qty"] += d; w["cost"] += trade["usd"]
