@@ -28,6 +28,15 @@ nav button:hover .ouro{text-decoration:underline}
 #ref-lado button{width:100%;padding:7px 6px}
 #logo img{width:64px;height:64px;border-radius:14px;display:block;box-shadow:0 2px 10px rgba(0,0,0,.45)}
 main{padding:18px 20px 60px;max-width:1500px;margin:0 auto;flex:1 1 0;min-width:0}
+/* banner do curso (link de afiliado na Cakto) */
+.curso{display:flex;flex-direction:column;gap:6px;margin-top:12px;background:linear-gradient(135deg,#221d10,#171a21 70%);border:1px solid #6b5420;border-radius:10px;padding:11px;font-size:12.5px;color:#c8ccd4}
+.curso .ind{font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.6px}
+.curso b{font-size:14px;color:#f1c40f;line-height:1.25}
+.curso .preco{color:var(--txt);font-weight:600}
+.curso a.cta{display:block;text-align:center;background:linear-gradient(90deg,#d4a737,#f1c40f);color:#111;font-weight:700;border-radius:9px;padding:8px 10px;text-decoration:none;white-space:nowrap}
+.curso a.cta:hover{filter:brightness(1.08);text-decoration:none}
+#curso-faixa{display:none}
+@media(max-width:700px){#curso-lado{display:none}#curso-faixa{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:10px 0 4px}#curso-faixa .tx{flex:1 1 200px}}
 @media(max-width:700px){#logo{flex-basis:auto;width:auto}#ref-lado{display:none}#logo{padding-left:10px}#logo img{width:44px;height:44px;border-radius:10px}main{padding-left:10px}}
 section{display:none}section.on{display:block}
 h2{font-size:16px;margin:26px 0 4px}
@@ -125,8 +134,9 @@ header #status{margin-left:0}
 <nav id="nav"></nav>
 <div id="wait">Preparando os dados… Na primeira vez o programa baixa todo o histórico da blockchain (10 a 20 minutos).<div id="waitd" style="margin-top:8px"></div></div>
 <div id="wrap">
-<aside id="logo" style="display:none"><img src="logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div></aside>
+<aside id="logo" style="display:none"><img src="logo.jpg" alt="Símbolo do VELL" title="VELL"><div id="ref-lado"></div><div id="curso-lado" class="curso"></div></aside>
 <main id="main" style="display:none">
+<div id="curso-faixa" class="curso"></div>
 
 <section id="t-geral">
   <h2>Resumo agora</h2>
@@ -436,6 +446,9 @@ function refCopiaAntiga(c,ok){const t=document.createElement("textarea");t.value
 document.addEventListener("keydown",e=>{if(e.key==="Escape")refFechar()});
 document.addEventListener("click",e=>{document.querySelectorAll("details.multi[open]").forEach(d=>{if(!d.contains(e.target))d.open=false})});
 const $=id=>document.getElementById(id);
+// curso divulgado no banner (link de afiliado do dono do site na Cakto)
+const CURSO={nome:"Curso Vellora Bitcoin School",txt:"Aprenda custódia, fundamentos do mercado cripto e a investir com método.",preco:"R$ 59,90",
+  link:"https://pay.cakto.com.br/55k783z_798578?affiliate=n2hvm6J2"};
 const TABS=[["geral","Visão geral"],["volume","Volume"],["carteiras","Baleias e carteiras"],["fluxo","Compras e vendas"],["liquidez","Liquidez e contrato"],["bnb","VELL x tokens"],["queimas","Queimas / burn"],["leitura","Leitura do mercado"]];
 let D=null, tab=localStorage.getItem("vell_tab")||"geral", charts={}, range={preco:"7d",bnb:"7d",perfil:"tudo",liqb:"30d"}, showPerfil=true, lthK=localStorage.getItem("vell_lth")||"30d", sthK=localStorage.getItem("vell_sth")||"7d", leiPz="curto", relRef=localStorage.getItem("vell_relref")||"BNB", liqModo=localStorage.getItem("vell_liqmodo")||"bnb", sel=(()=>{try{return JSON.parse(localStorage.getItem("vell_sel"))||["BNB"]}catch(e){return ["BNB"]}})(), tipo=localStorage.getItem("vell_tipo")||"linha", vela=localStorage.getItem("vell_vela")||"auto", movWin="24h", fluxoF="todas", fluxoPer="24h";
 const nf=(n,d=0)=>n==null||isNaN(n)?"—":n.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -916,6 +929,11 @@ function render(){
   $("wait").style.display="none";$("main").style.display="";$("logo").style.display="";$("ref-btn").style.display=D.indicacao&&D.indicacao.codigo?"":"none";
   const I=D.indicacao;
   $("ref-lado").innerHTML=I&&I.codigo?`<b>Ainda não tem a carteira Vellora?</b><span class="mut">Baixe o aplicativo e use o código de indicação no cadastro.</span><span class="codigo">${I.codigo}</span><button class="sec ref-cp" onclick="refCopiar()">Copiar</button><button class="refbtn" onclick="refAbrir()">Baixar carteira</button>`:"";
+  if(!$("curso-lado").innerHTML){
+    const a=`<a class="cta" href="${CURSO.link}" target="_blank" rel="sponsored noopener">Conhecer o curso</a>`;
+    $("curso-lado").innerHTML=`<span class="ind">Indicação</span><b>${CURSO.nome}</b><span>${CURSO.txt}</span><span class="preco">${CURSO.preco}</span>${a}`;
+    $("curso-faixa").innerHTML=`<div class="tx"><span class="ind">Indicação</span><br><b>${CURSO.nome}</b> · ${CURSO.txt} <span class="preco">${CURSO.preco}</span></div>${a}`;
+  }
   $("nav").innerHTML=TABS.map(t=>`<button class="${t[0]===tab?'on':''}" data-t="${t[0]}"><span class="ouro">${t[1]}</span></button>`).join("");
   $("nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{tab=b.dataset.t;localStorage.setItem("vell_tab",tab);render()});
   document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="t-"+tab));
