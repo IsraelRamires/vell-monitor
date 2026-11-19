@@ -95,10 +95,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           sleep 540
-          fila=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow atualizar-painel.yml --json databaseId,status                  --jq "[.[] | select(.databaseId != ${GITHUB_RUN_ID} and (.status == \"queued\" or .status == \"pending\" or .status == \"waiting\" or .status == \"in_progress\" or .status == \"requested\"))] | length")
+          fila=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow atualizar-painel.yml --json databaseId,status                  --jq "[.[] | select(.databaseId != ${GITHUB_RUN_ID} and (.status == \"queued\" or .status == \"pending\" or .status == \"waiting\" or .status == \"in_progress\" or .status == \"requested\"))] | length" || echo 0)
           if [ "${fila:-0}" = "0" ]; then
-            gh workflow run atualizar-painel.yml --repo "$GITHUB_REPOSITORY" --ref main
-            echo "Próxima atualização disparada."
+            # o GitHub às vezes responde erro 500; tenta de novo antes de desistir (senão a corrente para)
+            for t in 1 2 3 4 5 6; do
+              if gh workflow run atualizar-painel.yml --repo "$GITHUB_REPOSITORY" --ref main; then
+                echo "Próxima atualização disparada."; exit 0
+              fi
+              echo "Falha ao disparar (tentativa $t); tentando de novo em 30s..."; sleep 30
+            done
+            echo "Não consegui disparar a próxima atualização."; exit 1
           else
             echo "Já existe outra atualização na fila; não disparei outra."
           fi
